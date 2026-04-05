@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 function InstagramPreview({ post }: { post: any }) {
   return (
@@ -66,7 +67,7 @@ function InstagramPreview({ post }: { post: any }) {
         </div>
         <div className="text-white text-sm">
           <span className="font-semibold mr-2">@tuusuario</span>
-          <span className="whitespace-pre-wrap">{post.generatedCaption || "No caption yet"}</span>
+          <span className="whitespace-pre-wrap">{post.generatedCaption || "Sin caption todavia"}</span>
         </div>
         {post.generatedHashtags && (
           <div className="text-blue-400 text-sm mt-1">{post.generatedHashtags}</div>
@@ -77,7 +78,7 @@ function InstagramPreview({ post }: { post: any }) {
 }
 
 function TiktokPreview({ post }: { post: any }) {
-  const firstHook = post.generatedHooks ? post.generatedHooks.split('\n')[0].replace(/^[-*•]\s*/, '') : "Sample Hook";
+  const firstHook = post.generatedHooks ? post.generatedHooks.split('\n')[0].replace(/^[-*•]\s*/, '') : "Hook de ejemplo";
   return (
     <div className="w-[350px] mx-auto h-[700px] bg-black rounded-3xl overflow-hidden border-4 border-zinc-800 shadow-2xl relative mt-4">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-zinc-800 rounded-b-xl z-20"></div>
@@ -90,7 +91,7 @@ function TiktokPreview({ post }: { post: any }) {
         <div className="flex justify-between items-end">
           <div className="flex-1 pr-12">
             <h3 className="text-white font-bold text-sm mb-1">@tuusuario</h3>
-            <p className="text-white text-sm line-clamp-2">{post.generatedCaption || "Description goes here"}</p>
+            <p className="text-white text-sm line-clamp-2">{post.generatedCaption || "Descripcion aqui"}</p>
             {post.generatedHashtags && (
                <div className="text-white font-bold text-sm mt-1">{post.generatedHashtags.split(' ').slice(0,3).join(' ')}</div>
             )}
@@ -116,6 +117,16 @@ function TiktokPreview({ post }: { post: any }) {
   );
 }
 
+const statusLabel = (status: string) => {
+  const map: Record<string, string> = {
+    draft: "borrador",
+    ready: "listo",
+    published: "publicado",
+    idea: "idea",
+  };
+  return map[status] || status;
+};
+
 export default function PostDetail() {
   const [, params] = useRoute("/posts/:id");
   const [, setLocation] = useLocation();
@@ -132,12 +143,12 @@ export default function PostDetail() {
       onSuccess: (data) => {
         queryClient.setQueryData(getGetPostQueryKey(id), data);
         toast({
-          title: "Generation Complete",
-          description: "AI has crafted your content.",
+          title: "Generacion completada",
+          description: "La IA ha creado tu contenido.",
         });
       },
       onError: () => {
-        toast({ title: "Failed to generate", variant: "destructive" });
+        toast({ title: "Error al generar contenido", variant: "destructive" });
       }
     }
   });
@@ -146,7 +157,7 @@ export default function PostDetail() {
     mutation: {
       onSuccess: (data) => {
         queryClient.setQueryData(getGetPostQueryKey(id), data);
-        toast({ title: "Section regenerated!" });
+        toast({ title: "Seccion regenerada" });
       }
     }
   });
@@ -156,12 +167,12 @@ export default function PostDetail() {
       onSuccess: (data) => {
         queryClient.setQueryData(getGetPostQueryKey(id), data);
         toast({
-          title: "Marked as Published",
-          description: "This post is now tracked as published.",
+          title: "Marcado como publicado",
+          description: "Este post queda registrado como publicado.",
         });
       },
       onError: () => {
-        toast({ title: "Failed to publish", variant: "destructive" });
+        toast({ title: "Error al publicar", variant: "destructive" });
       }
     }
   });
@@ -169,7 +180,7 @@ export default function PostDetail() {
   const deleteMutation = useDeletePost({
     mutation: {
       onSuccess: () => {
-        toast({ title: "Post deleted" });
+        toast({ title: "Post eliminado" });
         setLocation("/posts");
       }
     }
@@ -181,7 +192,7 @@ export default function PostDetail() {
         queryClient.setQueryData(getGetPostQueryKey(id), data);
         setIsEditing(false);
         setIsScheduling(false);
-        toast({ title: "Post updated" });
+        toast({ title: "Post actualizado" });
       }
     }
   });
@@ -209,7 +220,7 @@ export default function PostDetail() {
 
   const handleCopy = (text: string, type: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: `Copied ${type} to clipboard` });
+    toast({ title: `${type} copiado al portapapeles` });
   };
 
   const handleSelectVariation = (caption: string) => {
@@ -240,7 +251,7 @@ export default function PostDetail() {
     <div className="max-w-4xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-20">
       <Link href="/posts" className="inline-flex items-center text-muted-foreground hover:text-primary transition-colors text-sm font-medium">
         <ArrowLeft className="w-4 h-4 mr-2" />
-        Back to Library
+        Volver a la Biblioteca
       </Link>
 
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
@@ -258,7 +269,7 @@ export default function PostDetail() {
               post.status === 'ready' ? 'bg-blue-500/10 text-blue-500' :
               'bg-zinc-500/10 text-zinc-400'
             }`}>
-              {post.status}
+              {statusLabel(post.status)}
             </span>
             {post.category && (
               <span className="text-xs px-2 py-1 bg-muted rounded-full">
@@ -269,7 +280,7 @@ export default function PostDetail() {
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" className="h-7 text-xs border-primary/30 text-primary hover:bg-primary/10" onClick={() => setIsScheduling(!isScheduling)}>
                 <CalendarDays className="w-3.5 h-3.5 mr-1" />
-                {post.scheduledAt ? format(new Date(post.scheduledAt), "MMM d, h:mm a") : "Schedule"}
+                {post.scheduledAt ? format(new Date(post.scheduledAt), "d MMM, HH:mm", { locale: es }) : "Programar"}
               </Button>
             </div>
           </div>
@@ -277,7 +288,7 @@ export default function PostDetail() {
           {isScheduling && (
              <div className="mb-4 p-3 bg-card border border-primary/30 rounded-xl flex gap-2 items-center w-max">
                <Input type="datetime-local" className="bg-background" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} />
-               <Button size="sm" onClick={handleSaveSchedule}>Save</Button>
+               <Button size="sm" onClick={handleSaveSchedule}>Guardar</Button>
              </div>
           )}
 
@@ -294,8 +305,8 @@ export default function PostDetail() {
                 className="bg-background/50 min-h-[100px] border-primary/30"
               />
               <div className="flex gap-2 justify-end">
-                <Button variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>
-                <Button onClick={handleSaveEdit} disabled={updateMutation.isPending}>Save Changes</Button>
+                <Button variant="ghost" onClick={() => setIsEditing(false)}>Cancelar</Button>
+                <Button onClick={handleSaveEdit} disabled={updateMutation.isPending}>Guardar Cambios</Button>
               </div>
             </div>
           ) : (
@@ -318,8 +329,8 @@ export default function PostDetail() {
           )}
 
           <div className="flex flex-wrap gap-4 mt-4 text-sm text-muted-foreground">
-            {post.tone && <span className="bg-muted px-2.5 py-1 rounded-md">Tone: <strong className="text-foreground">{post.tone}</strong></span>}
-            {post.targetAudience && <span className="bg-muted px-2.5 py-1 rounded-md">Audience: <strong className="text-foreground">{post.targetAudience}</strong></span>}
+            {post.tone && <span className="bg-muted px-2.5 py-1 rounded-md">Tono: <strong className="text-foreground">{post.tone}</strong></span>}
+            {post.targetAudience && <span className="bg-muted px-2.5 py-1 rounded-md">Audiencia: <strong className="text-foreground">{post.targetAudience}</strong></span>}
           </div>
         </div>
 
@@ -328,11 +339,11 @@ export default function PostDetail() {
             <DialogTrigger asChild>
               <Button variant="outline" className="flex-1 md:w-full border-primary/30 hover:bg-primary/10 text-primary gap-2">
                 <Eye className="w-4 h-4" />
-                Preview
+                Vista Previa
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] bg-transparent border-none shadow-none p-0">
-              <DialogTitle className="sr-only">Preview Post</DialogTitle>
+              <DialogTitle className="sr-only">Vista previa del post</DialogTitle>
               {isInstagram ? <InstagramPreview post={post} /> : <TiktokPreview post={post} />}
             </DialogContent>
           </Dialog>
@@ -347,7 +358,7 @@ export default function PostDetail() {
             ) : (
               <Sparkles className="w-5 h-5" />
             )}
-            {post.generatedCaption ? "Regenerate All" : "Generate AI"}
+            {post.generatedCaption ? "Regenerar Todo" : "Generar con IA"}
           </Button>
 
           {post.status === 'ready' && (
@@ -358,7 +369,7 @@ export default function PostDetail() {
               disabled={publishMutation.isPending}
             >
               <CheckCircle className="w-4 h-4" />
-              Mark Published
+              Marcar como Publicado
             </Button>
           )}
 
@@ -366,7 +377,7 @@ export default function PostDetail() {
             variant="ghost"
             className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-2 px-3"
             onClick={() => {
-              if (confirm("Delete this post permanently?")) {
+              if (confirm("Eliminar este post permanentemente?")) {
                 deleteMutation.mutate({ id });
               }
             }}
@@ -382,16 +393,16 @@ export default function PostDetail() {
           <Card className="border-border bg-card/50 overflow-hidden border-t-2 border-t-primary/50 relative">
             <div className="absolute top-0 right-0 p-4 flex gap-2">
               <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-primary gap-1.5" onClick={() => regenerateSectionMutation.mutate({ id, data: { section: "caption" } })} disabled={regenerateSectionMutation.isPending}>
-                <RefreshCw className={`w-3.5 h-3.5 ${regenerateSectionMutation.isPending ? 'animate-spin' : ''}`} /> Regenerate
+                <RefreshCw className={`w-3.5 h-3.5 ${regenerateSectionMutation.isPending ? 'animate-spin' : ''}`} /> Regenerar
               </Button>
               <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-primary gap-1.5" onClick={() => handleCopy(post.generatedCaption!, "Caption")}>
-                <Copy className="w-3.5 h-3.5" /> Copy
+                <Copy className="w-3.5 h-3.5" /> Copiar
               </Button>
             </div>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <MessageSquare className="w-5 h-5 text-primary" />
-                Main Caption
+                Caption Principal
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -405,13 +416,13 @@ export default function PostDetail() {
             <Card className="border-border bg-card/50 relative">
               <div className="absolute top-0 right-0 p-4">
                 <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-primary gap-1.5" onClick={() => regenerateSectionMutation.mutate({ id, data: { section: "variations" } })} disabled={regenerateSectionMutation.isPending}>
-                  <RefreshCw className={`w-3.5 h-3.5 ${regenerateSectionMutation.isPending ? 'animate-spin' : ''}`} /> Regenerate
+                  <RefreshCw className={`w-3.5 h-3.5 ${regenerateSectionMutation.isPending ? 'animate-spin' : ''}`} /> Regenerar
                 </Button>
               </div>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Sparkles className="w-5 h-5 text-primary" />
-                  Alternative Variations
+                  Variaciones Alternativas
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -420,8 +431,8 @@ export default function PostDetail() {
                     <div key={i} className="p-4 rounded-xl border border-border bg-background/50 hover:border-primary/50 transition-colors group">
                       <p className="whitespace-pre-wrap text-sm mb-4">{v}</p>
                       <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="outline" size="sm" className="h-8" onClick={() => handleSelectVariation(v)}>Set as Main</Button>
-                        <Button variant="ghost" size="sm" className="h-8" onClick={() => handleCopy(v, "Variation")}><Copy className="w-4 h-4" /></Button>
+                        <Button variant="outline" size="sm" className="h-8" onClick={() => handleSelectVariation(v)}>Usar como Principal</Button>
+                        <Button variant="ghost" size="sm" className="h-8" onClick={() => handleCopy(v, "Variacion")}><Copy className="w-4 h-4" /></Button>
                       </div>
                     </div>
                   ))}
@@ -434,18 +445,18 @@ export default function PostDetail() {
             <Card className="border-border bg-card/50 relative">
               <div className="absolute top-0 right-0 p-4 flex gap-2">
                 <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-secondary gap-1.5" onClick={() => regenerateSectionMutation.mutate({ id, data: { section: "hooks" } })} disabled={regenerateSectionMutation.isPending}>
-                  <RefreshCw className={`w-3.5 h-3.5 ${regenerateSectionMutation.isPending ? 'animate-spin' : ''}`} /> Regenerate
+                  <RefreshCw className={`w-3.5 h-3.5 ${regenerateSectionMutation.isPending ? 'animate-spin' : ''}`} /> Regenerar
                 </Button>
                 <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-secondary gap-1.5" onClick={() => handleCopy(post.generatedHooks!, "Hooks")}>
-                  <Copy className="w-3.5 h-3.5" /> Copy
+                  <Copy className="w-3.5 h-3.5" /> Copiar
                 </Button>
               </div>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <RefreshCw className="w-5 h-5 text-secondary" />
-                  Video/Image Hooks
+                  Hooks para Video/Imagen
                 </CardTitle>
-                <CardDescription>First 3 seconds hooks to capture attention</CardDescription>
+                <CardDescription>Primeros 3 segundos para captar la atencion</CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="list-disc list-outside ml-5 space-y-2 text-foreground/80">
@@ -461,10 +472,10 @@ export default function PostDetail() {
             <Card className="border-border bg-card/50 relative">
               <div className="absolute top-0 right-0 p-4 flex gap-2">
                 <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-cyan-400 gap-1.5" onClick={() => regenerateSectionMutation.mutate({ id, data: { section: "hashtags" } })} disabled={regenerateSectionMutation.isPending}>
-                  <RefreshCw className={`w-3.5 h-3.5 ${regenerateSectionMutation.isPending ? 'animate-spin' : ''}`} /> Regenerate
+                  <RefreshCw className={`w-3.5 h-3.5 ${regenerateSectionMutation.isPending ? 'animate-spin' : ''}`} /> Regenerar
                 </Button>
                 <Button variant="ghost" size="sm" className="h-8 text-muted-foreground hover:text-cyan-400 gap-1.5" onClick={() => handleCopy(post.generatedHashtags!, "Hashtags")}>
-                  <Copy className="w-3.5 h-3.5" /> Copy
+                  <Copy className="w-3.5 h-3.5" /> Copiar
                 </Button>
               </div>
               <CardHeader>
@@ -488,9 +499,9 @@ export default function PostDetail() {
             <div className="w-20 h-20 rounded-2xl bg-muted mx-auto flex items-center justify-center mb-6 shadow-xl border border-border">
               <Sparkles className="w-10 h-10 text-muted-foreground" />
             </div>
-            <h3 className="text-2xl font-bold mb-3 text-foreground">Awaiting AI Generation</h3>
+            <h3 className="text-2xl font-bold mb-3 text-foreground">Esperando generacion de IA</h3>
             <p className="text-muted-foreground max-w-md mx-auto mb-8">
-              Your brief is ready. Click the generate button above to let AI craft your captions, hooks, and hashtags.
+              Tu brief esta listo. Pulsa el boton de generar para que la IA cree tus captions, hooks y hashtags.
             </p>
             <Button 
               className="bg-studio-gradient hover:opacity-90 text-white font-bold shadow-[0_0_20px_rgba(255,0,255,0.4)] gap-2 px-8 py-6 text-lg"
@@ -500,12 +511,12 @@ export default function PostDetail() {
               {generateMutation.isPending ? (
                 <>
                   <RefreshCw className="w-5 h-5 animate-spin" />
-                  Generating...
+                  Generando...
                 </>
               ) : (
                 <>
                   <Sparkles className="w-5 h-5" />
-                  Generate Magic
+                  Generar Contenido
                 </>
               )}
             </Button>

@@ -13,21 +13,31 @@ export default function Dashboard() {
 
   const colors = ["hsl(320 100% 60%)", "hsl(270 100% 60%)", "hsl(190 100% 50%)", "hsl(45 100% 50%)", "hsl(160 100% 40%)"];
 
+  const statusLabel = (status: string) => {
+    const map: Record<string, string> = {
+      draft: "BORRADOR",
+      ready: "LISTO",
+      published: "PUBLICADO",
+      idea: "IDEA",
+    };
+    return map[status] || status.toUpperCase();
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-            Command Center
+            Panel de Control
           </h1>
           <p className="text-muted-foreground mt-1">
-            Overview of your creative studio pipeline.
+            Vista general de tu estudio creativo.
           </p>
         </div>
         <Link href="/create" className="shrink-0">
           <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_15px_rgba(255,0,255,0.3)] hover:shadow-[0_0_25px_rgba(255,0,255,0.5)] transition-all duration-300 gap-2 font-bold px-6">
             <PlusCircle className="w-5 h-5" />
-            New Post Idea
+            Nueva Idea
           </Button>
         </Link>
       </div>
@@ -59,7 +69,7 @@ export default function Dashboard() {
           </Card>
           <Card className="border-border bg-card hover:border-secondary/50 transition-colors duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Drafts</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Borradores</CardTitle>
               <Clock className="h-4 w-4 text-secondary" />
             </CardHeader>
             <CardContent>
@@ -68,7 +78,7 @@ export default function Dashboard() {
           </Card>
           <Card className="border-border bg-card hover:border-green-500/50 transition-colors duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Published</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Publicados</CardTitle>
               <CheckCircle className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
@@ -77,7 +87,7 @@ export default function Dashboard() {
           </Card>
           <Card className="border-border bg-card hover:border-purple-500/50 transition-colors duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Scheduled</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Programados</CardTitle>
               <CalendarDays className="h-4 w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
@@ -86,7 +96,7 @@ export default function Dashboard() {
           </Card>
           <Card className="border-border bg-card hover:border-blue-500/50 transition-colors duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Platform Split</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Por Plataforma</CardTitle>
               <Activity className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent className="flex items-end gap-4 mt-2">
@@ -106,10 +116,10 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">Recent Activity</h2>
+            <h2 className="text-xl font-bold">Actividad Reciente</h2>
             <Link href="/posts">
               <Button variant="link" className="text-muted-foreground hover:text-primary">
-                View All
+                Ver todo
               </Button>
             </Link>
           </div>
@@ -129,9 +139,9 @@ export default function Dashboard() {
               ))
             ) : recentPosts?.length === 0 ? (
               <div className="text-center py-12 border border-dashed border-border rounded-xl bg-card/50">
-                <p className="text-muted-foreground">No recent posts found.</p>
+                <p className="text-muted-foreground">No hay posts recientes.</p>
                 <Link href="/create" className="mt-4 inline-block">
-                  <Button variant="outline" className="border-primary/50 text-primary">Start creating</Button>
+                  <Button variant="outline" className="border-primary/50 text-primary">Empieza a crear</Button>
                 </Link>
               </div>
             ) : (
@@ -157,7 +167,7 @@ export default function Dashboard() {
                           post.status === 'idea' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' :
                           'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20'
                         }`}>
-                          {post.status.toUpperCase()}
+                          {statusLabel(post.status)}
                         </span>
                         {post.category && <span className="text-xs text-muted-foreground">{post.category}</span>}
                       </div>
@@ -171,7 +181,7 @@ export default function Dashboard() {
 
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">Categories Breakdown</h2>
+            <h2 className="text-xl font-bold">Posts por Categoria</h2>
           </div>
           <Card className="bg-card border-border">
             <CardContent className="p-6">
@@ -197,7 +207,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                  No category data available.
+                  Sin datos de categorias todavia.
                 </div>
               )}
             </CardContent>

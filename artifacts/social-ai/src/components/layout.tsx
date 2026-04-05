@@ -6,12 +6,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
 
   const navItems = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/create", label: "New Post", icon: PlusCircle },
-    { href: "/posts", label: "All Posts", icon: List },
-    { href: "/templates", label: "Templates", icon: LayoutTemplate },
-    { href: "/ideas", label: "Ideas Bank", icon: Lightbulb },
-    { href: "/calendar", label: "Calendar", icon: CalendarDays },
+    { href: "/", label: "Inicio", icon: LayoutDashboard },
+    { href: "/create", label: "Nuevo Post", icon: PlusCircle },
+    { href: "/posts", label: "Mis Posts", icon: List },
+    { href: "/templates", label: "Plantillas", icon: LayoutTemplate },
+    { href: "/ideas", label: "Banco de Ideas", icon: Lightbulb },
+    { href: "/calendar", label: "Calendario", icon: CalendarDays },
   ];
 
   return (
@@ -48,10 +48,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         <div className="p-6 border-t border-border">
           <div className="bg-gradient-to-br from-primary/10 to-secondary/10 p-4 rounded-xl border border-primary/20">
-            <h4 className="font-semibold text-sm mb-2 text-foreground">Pro Plan Active</h4>
-            <p className="text-xs text-muted-foreground mb-3">Unlimited AI generations</p>
+            <h4 className="font-semibold text-sm mb-2 text-foreground">Plan Pro Activo</h4>
+            <p className="text-xs text-muted-foreground mb-3">Generaciones de IA ilimitadas</p>
             <Button size="sm" variant="outline" className="w-full border-primary/30 hover:bg-primary/10">
-              Manage Billing
+              Gestionar Plan
             </Button>
           </div>
         </div>

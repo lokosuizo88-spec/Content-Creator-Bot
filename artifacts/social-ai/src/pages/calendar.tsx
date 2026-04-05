@@ -2,10 +2,21 @@ import { useState } from "react";
 import { useGetScheduledPosts } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { format, isSameDay } from "date-fns";
+import { es } from "date-fns/locale";
 import { Instagram, FileVideo, CalendarDays } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+
+const statusLabel = (status: string) => {
+  const map: Record<string, string> = {
+    draft: "BORRADOR",
+    ready: "LISTO",
+    published: "PUBLICADO",
+    idea: "IDEA",
+  };
+  return map[status] || status.toUpperCase();
+};
 
 export default function CalendarPage() {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -22,9 +33,9 @@ export default function CalendarPage() {
       <div>
         <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-3">
           <CalendarDays className="w-8 h-8 text-primary" />
-          Content Calendar
+          Calendario de Contenido
         </h1>
-        <p className="text-muted-foreground mt-2">Manage your publishing schedule.</p>
+        <p className="text-muted-foreground mt-2">Gestiona tu calendario de publicaciones.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
@@ -35,6 +46,7 @@ export default function CalendarPage() {
                 mode="single"
                 selected={date}
                 onSelect={setDate}
+                locale={es}
                 modifiers={{ scheduled: scheduledDates }}
                 modifiersStyles={{
                   scheduled: { fontWeight: 'bold', backgroundColor: 'var(--primary-20)', border: '1px solid hsl(var(--primary))' }
@@ -59,17 +71,17 @@ export default function CalendarPage() {
 
         <div className="md:col-span-7 lg:col-span-8 space-y-4">
           <h2 className="text-2xl font-bold flex items-center gap-2">
-            {date ? format(date, 'MMMM d, yyyy') : 'Select a date'}
+            {date ? format(date, "d 'de' MMMM, yyyy", { locale: es }) : 'Selecciona una fecha'}
             <Badge variant="outline" className="ml-2 bg-primary/10 text-primary border-primary/30">
               {selectedDatePosts?.length || 0} posts
             </Badge>
           </h2>
 
           {isLoading ? (
-            <p>Loading schedule...</p>
+            <p>Cargando calendario...</p>
           ) : selectedDatePosts?.length === 0 ? (
             <div className="text-center py-16 border border-dashed border-border rounded-xl bg-card/30">
-              <p className="text-muted-foreground text-lg">No posts scheduled for this day.</p>
+              <p className="text-muted-foreground text-lg">No hay posts programados para este dia.</p>
             </div>
           ) : (
             <div className="grid gap-4">
@@ -87,13 +99,13 @@ export default function CalendarPage() {
                       <div className="flex-1 min-w-0">
                         <h3 className="text-lg font-bold truncate group-hover:text-primary transition-colors">{post.topic}</h3>
                         <p className="text-sm text-muted-foreground truncate">
-                          {format(new Date(post.scheduledAt!), 'h:mm a')} • {post.category || 'Uncategorized'}
+                          {format(new Date(post.scheduledAt!), 'HH:mm')} - {post.category || 'Sin categoria'}
                         </p>
                       </div>
                       <Badge className={
                         post.status === 'published' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
                       }>
-                        {post.status.toUpperCase()}
+                        {statusLabel(post.status)}
                       </Badge>
                     </CardContent>
                   </Card>

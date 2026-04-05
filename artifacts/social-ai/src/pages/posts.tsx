@@ -8,7 +8,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Instagram, FileVideo, Search, Calendar, ChevronRight, Download } from "lucide-react";
 import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+
+const statusLabel = (status: string) => {
+  const map: Record<string, string> = {
+    draft: "BORRADOR",
+    ready: "LISTO",
+    published: "PUBLICADO",
+    idea: "IDEA",
+  };
+  return map[status] || status.toUpperCase();
+};
 
 export default function Posts() {
   const [platform, setPlatform] = useState<"all" | "instagram" | "tiktok">("all");
@@ -42,10 +53,10 @@ export default function Posts() {
         a.download = data.filename;
         a.click();
         window.URL.revokeObjectURL(url);
-        toast({ title: "Export successful", description: "CSV downloaded." });
+        toast({ title: "Exportacion exitosa", description: "CSV descargado." });
       }
     } catch (error) {
-      toast({ title: "Export failed", variant: "destructive" });
+      toast({ title: "Error al exportar", variant: "destructive" });
     }
   };
 
@@ -55,17 +66,30 @@ export default function Posts() {
   );
 
   const commonCategories = ["lifestyle", "food", "fitness", "travel", "beauty", "fashion", "education", "business", "entertainment", "tech", "other"];
+  const categoryLabels: Record<string, string> = {
+    lifestyle: "Estilo de vida",
+    food: "Comida",
+    fitness: "Fitness",
+    travel: "Viajes",
+    beauty: "Belleza",
+    fashion: "Moda",
+    education: "Educacion",
+    business: "Negocios",
+    entertainment: "Entretenimiento",
+    tech: "Tecnologia",
+    other: "Otro",
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Content Library</h1>
-          <p className="text-muted-foreground mt-2">Every idea, draft, and hit in one place.</p>
+          <h1 className="text-3xl font-extrabold tracking-tight">Biblioteca de Contenido</h1>
+          <p className="text-muted-foreground mt-2">Todas tus ideas, borradores y publicaciones en un solo lugar.</p>
         </div>
         <Button onClick={handleExport} variant="outline" className="shrink-0 gap-2 border-primary/30 text-primary hover:bg-primary/10">
           <Download className="w-4 h-4" />
-          Export CSV
+          Exportar CSV
         </Button>
       </div>
 
@@ -73,7 +97,7 @@ export default function Posts() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
-            placeholder="Search topics or context..." 
+            placeholder="Buscar por tema o contexto..." 
             className="pl-9 bg-background/50 border-muted focus-visible:ring-primary/30"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -81,35 +105,35 @@ export default function Posts() {
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
           <Select value={platform} onValueChange={(v: any) => setPlatform(v)}>
-            <SelectTrigger className="w-[130px] bg-background/50">
-              <SelectValue placeholder="Platform" />
+            <SelectTrigger className="w-[140px] bg-background/50">
+              <SelectValue placeholder="Plataforma" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Platforms</SelectItem>
+              <SelectItem value="all">Todas</SelectItem>
               <SelectItem value="instagram">Instagram</SelectItem>
               <SelectItem value="tiktok">TikTok</SelectItem>
             </SelectContent>
           </Select>
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-[130px] bg-background/50">
-              <SelectValue placeholder="Status" />
+            <SelectTrigger className="w-[140px] bg-background/50">
+              <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="ready">Ready</SelectItem>
-              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="all">Todos los estados</SelectItem>
+              <SelectItem value="draft">Borrador</SelectItem>
+              <SelectItem value="ready">Listo</SelectItem>
+              <SelectItem value="published">Publicado</SelectItem>
               <SelectItem value="idea">Idea</SelectItem>
             </SelectContent>
           </Select>
           <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="w-[130px] bg-background/50">
-              <SelectValue placeholder="Category" />
+            <SelectTrigger className="w-[150px] bg-background/50">
+              <SelectValue placeholder="Categoria" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="all">Todas las categorias</SelectItem>
               {commonCategories.map(c => (
-                <SelectItem key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</SelectItem>
+                <SelectItem key={c} value={c}>{categoryLabels[c] || c}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -134,8 +158,8 @@ export default function Posts() {
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
               <Search className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h3 className="text-xl font-bold mb-2">No posts found</h3>
-            <p className="text-muted-foreground">Try adjusting your filters or search term.</p>
+            <h3 className="text-xl font-bold mb-2">No se encontraron posts</h3>
+            <p className="text-muted-foreground">Prueba a cambiar los filtros o el termino de busqueda.</p>
           </div>
         ) : (
           filteredPosts?.map((post, i) => (
@@ -162,7 +186,7 @@ export default function Posts() {
                   <div className="flex items-center gap-4 shrink-0 md:pl-4 md:border-l border-border mt-4 md:mt-0">
                     <div className="flex items-center text-xs text-muted-foreground gap-1.5 hidden md:flex">
                       <Calendar className="w-3.5 h-3.5" />
-                      {format(new Date(post.createdAt), 'MMM d, yyyy')}
+                      {format(new Date(post.createdAt), 'd MMM yyyy', { locale: es })}
                     </div>
                     {post.category && (
                       <span className="text-xs text-muted-foreground bg-muted px-2 rounded-full py-0.5">
@@ -175,7 +199,7 @@ export default function Posts() {
                       post.status === 'idea' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' :
                       'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20'
                     }`}>
-                      {post.status.toUpperCase()}
+                      {statusLabel(post.status)}
                     </span>
                     <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors group-hover:translate-x-1 duration-300" />
                   </div>
