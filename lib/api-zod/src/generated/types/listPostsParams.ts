@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Social AI Content Creator API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import type { ListPostsPlatform } from "./listPostsPlatform";
 import type { ListPostsStatus } from "./listPostsStatus";
@@ -11,4 +11,5 @@ import type { ListPostsStatus } from "./listPostsStatus";
 export type ListPostsParams = {
   platform?: ListPostsPlatform;
   status?: ListPostsStatus;
+  category?: string;
 };

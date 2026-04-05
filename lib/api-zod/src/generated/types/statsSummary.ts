@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Social AI Content Creator API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 
 export interface StatsSummary {
@@ -11,6 +11,8 @@ export interface StatsSummary {
   draftPosts: number;
   readyPosts: number;
   publishedPosts: number;
+  ideaPosts: number;
+  scheduledPosts: number;
   instagramPosts: number;
   tiktokPosts: number;
 }

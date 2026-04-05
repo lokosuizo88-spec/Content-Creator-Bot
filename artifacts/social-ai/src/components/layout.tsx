@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, PlusCircle, List, Activity } from "lucide-react";
+import { LayoutDashboard, PlusCircle, List, Activity, LayoutTemplate, Lightbulb, CalendarDays } from "lucide-react";
 import { Button } from "./ui/button";
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -9,12 +9,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
     { href: "/create", label: "New Post", icon: PlusCircle },
     { href: "/posts", label: "All Posts", icon: List },
+    { href: "/templates", label: "Templates", icon: LayoutTemplate },
+    { href: "/ideas", label: "Ideas Bank", icon: Lightbulb },
+    { href: "/calendar", label: "Calendar", icon: CalendarDays },
   ];
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row dark">
       {/* Sidebar */}
-      <aside className="w-full md:w-64 border-r border-border bg-card flex flex-col">
+      <aside className="w-full md:w-64 border-r border-border bg-card flex flex-col shrink-0">
         <div className="p-6 border-b border-border flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-studio-gradient flex items-center justify-center shadow-lg shadow-primary/20">
             <Activity className="w-5 h-5 text-white" />
@@ -22,9 +25,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <span className="font-bold text-xl tracking-tight">SocialAI</span>
         </div>
         
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {navItems.map((item) => {
-            const isActive = location === item.href;
+            const isActive = location === item.href || (location.startsWith(item.href) && item.href !== "/");
             return (
               <Link key={item.href} href={item.href} className="block">
                 <Button

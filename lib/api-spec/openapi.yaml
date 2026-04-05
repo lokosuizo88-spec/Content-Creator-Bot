@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
+  version: 0.2.0
   description: Social AI Content Creator API
 servers:
   - url: /api
@@ -12,6 +12,8 @@ tags:
     description: Health operations
   - name: posts
     description: Social media post operations
+  - name: templates
+    description: Tone/style template operations
   - name: stats
     description: Stats and analytics
 
@@ -21,7 +23,6 @@ paths:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -47,7 +48,12 @@ paths:
           required: false
           schema:
             type: string
-            enum: [draft, ready, published]
+            enum: [draft, ready, published, idea]
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
       responses:
         "200":
           description: List of posts
@@ -74,6 +80,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Post"
+
+  /posts/export:
+    get:
+      operationId: exportPosts
+      tags: [posts]
+      summary: Export all posts as CSV string
+      responses:
+        "200":
+          description: CSV data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportResult"
 
   /posts/{id}:
     get:
@@ -136,7 +155,7 @@ paths:
     post:
       operationId: generatePostContent
       tags: [posts]
-      summary: Generate AI content for a post
+      summary: Generate AI content for a post (caption + hashtags + hooks + 3 variations)
       parameters:
         - name: id
           in: path
@@ -145,7 +164,32 @@ paths:
             type: integer
       responses:
         "200":
-          description: AI content generated and saved
+          description: AI content generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+
+  /posts/{id}/regenerate-section:
+    post:
+      operationId: regenerateSection
+      tags: [posts]
+      summary: Regenerate only a specific section (caption, hashtags, or hooks)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegenerateSectionBody"
+      responses:
+        "200":
+          description: Section regenerated
           content:
             application/json:
               schema:
@@ -164,11 +208,58 @@ paths:
             type: integer
       responses:
         "200":
-          description: Post marked as published
+          description: Post published
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Post"
+
+  /templates:
+    get:
+      operationId: listTemplates
+      tags: [templates]
+      summary: List all tone templates
+      responses:
+        "200":
+          description: List of templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Template"
+    post:
+      operationId: createTemplate
+      tags: [templates]
+      summary: Create a tone template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTemplateBody"
+      responses:
+        "201":
+          description: Template created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+
+  /templates/{id}:
+    delete:
+      operationId: deleteTemplate
+      tags: [templates]
+      summary: Delete a template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Template deleted
 
   /stats/summary:
     get:
@@ -190,7 +281,37 @@ paths:
       summary: Get recent post activity
       responses:
         "200":
-          description: Recent posts list
+          description: Recent posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Post"
+
+  /stats/by-category:
+    get:
+      operationId: getPostsByCategory
+      tags: [stats]
+      summary: Get post count grouped by category
+      responses:
+        "200":
+          description: Category breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryCount"
+
+  /stats/scheduled:
+    get:
+      operationId: getScheduledPosts
+      tags: [stats]
+      summary: Get upcoming scheduled posts
+      responses:
+        "200":
+          description: Scheduled posts
           content:
             application/json:
               schema:
@@ -205,8 +326,7 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
     Post:
       type: object
@@ -222,7 +342,10 @@ components:
           enum: [instagram, tiktok]
         status:
           type: string
-          enum: [draft, ready, published]
+          enum: [draft, ready, published, idea]
+        category:
+          type: string
+          nullable: true
         generatedCaption:
           type: string
           nullable: true
@@ -232,10 +355,16 @@ components:
         generatedHooks:
           type: string
           nullable: true
+        generatedVariations:
+          type: string
+          nullable: true
         tone:
           type: string
           nullable: true
         targetAudience:
+          type: string
+          nullable: true
+        scheduledAt:
           type: string
           nullable: true
         createdAt:
@@ -267,6 +396,16 @@ components:
         targetAudience:
           type: string
           nullable: true
+        category:
+          type: string
+          nullable: true
+        scheduledAt:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [draft, ready, published, idea]
+          nullable: true
       required:
         - topic
         - context
@@ -288,9 +427,15 @@ components:
         targetAudience:
           type: string
           nullable: true
+        category:
+          type: string
+          nullable: true
         status:
           type: string
-          enum: [draft, ready, published]
+          enum: [draft, ready, published, idea]
+        scheduledAt:
+          type: string
+          nullable: true
         generatedCaption:
           type: string
           nullable: true
@@ -300,6 +445,66 @@ components:
         generatedHooks:
           type: string
           nullable: true
+        generatedVariations:
+          type: string
+          nullable: true
+
+    RegenerateSectionBody:
+      type: object
+      properties:
+        section:
+          type: string
+          enum: [caption, hashtags, hooks, variations]
+      required: [section]
+
+    ExportResult:
+      type: object
+      properties:
+        csv:
+          type: string
+        filename:
+          type: string
+      required: [csv, filename]
+
+    Template:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        tone:
+          type: string
+        targetAudience:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        platform:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, name, tone, createdAt]
+
+    CreateTemplateBody:
+      type: object
+      properties:
+        name:
+          type: string
+        tone:
+          type: string
+        targetAudience:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        platform:
+          type: string
+          nullable: true
+      required: [name, tone]
 
     StatsSummary:
       type: object
@@ -312,6 +517,10 @@ components:
           type: integer
         publishedPosts:
           type: integer
+        ideaPosts:
+          type: integer
+        scheduledPosts:
+          type: integer
         instagramPosts:
           type: integer
         tiktokPosts:
@@ -321,5 +530,16 @@ components:
         - draftPosts
         - readyPosts
         - publishedPosts
+        - ideaPosts
+        - scheduledPosts
         - instagramPosts
         - tiktokPosts
+
+    CategoryCount:
+      type: object
+      properties:
+        category:
+          type: string
+        count:
+          type: integer
+      required: [category, count]

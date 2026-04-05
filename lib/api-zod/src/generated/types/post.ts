@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Social AI Content Creator API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import type { PostPlatform } from "./postPlatform";
 import type { PostStatus } from "./postStatus";
@@ -14,11 +14,14 @@ export interface Post {
   context: string;
   platform: PostPlatform;
   status: PostStatus;
+  category?: string | null;
   generatedCaption?: string | null;
   generatedHashtags?: string | null;
   generatedHooks?: string | null;
+  generatedVariations?: string | null;
   tone?: string | null;
   targetAudience?: string | null;
+  scheduledAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

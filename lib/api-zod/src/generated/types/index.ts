@@ -3,11 +3,15 @@
  * Do not edit manually.
  * Api
  * Social AI Content Creator API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 
+export * from "./categoryCount";
 export * from "./createPostBody";
 export * from "./createPostBodyPlatform";
+export * from "./createPostBodyStatus";
+export * from "./createTemplateBody";
+export * from "./exportResult";
 export * from "./healthStatus";
 export * from "./listPostsParams";
 export * from "./listPostsPlatform";
@@ -15,7 +19,10 @@ export * from "./listPostsStatus";
 export * from "./post";
 export * from "./postPlatform";
 export * from "./postStatus";
+export * from "./regenerateSectionBody";
+export * from "./regenerateSectionBodySection";
 export * from "./statsSummary";
+export * from "./template";
 export * from "./updatePostBody";
 export * from "./updatePostBodyPlatform";
 export * from "./updatePostBodyStatus";

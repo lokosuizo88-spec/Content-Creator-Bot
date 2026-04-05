@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Social AI Content Creator API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 export interface HealthStatus {
   status: string;
@@ -22,6 +22,7 @@ export const PostStatus = {
   draft: "draft",
   ready: "ready",
   published: "published",
+  idea: "idea",
 } as const;
 
 export interface Post {
@@ -30,11 +31,14 @@ export interface Post {
   context: string;
   platform: PostPlatform;
   status: PostStatus;
+  category?: string | null;
   generatedCaption?: string | null;
   generatedHashtags?: string | null;
   generatedHooks?: string | null;
+  generatedVariations?: string | null;
   tone?: string | null;
   targetAudience?: string | null;
+  scheduledAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -47,12 +51,26 @@ export const CreatePostBodyPlatform = {
   tiktok: "tiktok",
 } as const;
 
+export type CreatePostBodyStatus =
+  | (typeof CreatePostBodyStatus)[keyof typeof CreatePostBodyStatus]
+  | null;
+
+export const CreatePostBodyStatus = {
+  draft: "draft",
+  ready: "ready",
+  published: "published",
+  idea: "idea",
+} as const;
+
 export interface CreatePostBody {
   topic: string;
   context: string;
   platform: CreatePostBodyPlatform;
   tone?: string | null;
   targetAudience?: string | null;
+  category?: string | null;
+  scheduledAt?: string | null;
+  status?: CreatePostBodyStatus;
 }
 
 export type UpdatePostBodyPlatform =
@@ -70,6 +88,7 @@ export const UpdatePostBodyStatus = {
   draft: "draft",
   ready: "ready",
   published: "published",
+  idea: "idea",
 } as const;
 
 export interface UpdatePostBody {
@@ -78,10 +97,50 @@ export interface UpdatePostBody {
   platform?: UpdatePostBodyPlatform;
   tone?: string | null;
   targetAudience?: string | null;
+  category?: string | null;
   status?: UpdatePostBodyStatus;
+  scheduledAt?: string | null;
   generatedCaption?: string | null;
   generatedHashtags?: string | null;
   generatedHooks?: string | null;
+  generatedVariations?: string | null;
+}
+
+export type RegenerateSectionBodySection =
+  (typeof RegenerateSectionBodySection)[keyof typeof RegenerateSectionBodySection];
+
+export const RegenerateSectionBodySection = {
+  caption: "caption",
+  hashtags: "hashtags",
+  hooks: "hooks",
+  variations: "variations",
+} as const;
+
+export interface RegenerateSectionBody {
+  section: RegenerateSectionBodySection;
+}
+
+export interface ExportResult {
+  csv: string;
+  filename: string;
+}
+
+export interface Template {
+  id: number;
+  name: string;
+  tone: string;
+  targetAudience?: string | null;
+  category?: string | null;
+  platform?: string | null;
+  createdAt: string;
+}
+
+export interface CreateTemplateBody {
+  name: string;
+  tone: string;
+  targetAudience?: string | null;
+  category?: string | null;
+  platform?: string | null;
 }
 
 export interface StatsSummary {
@@ -89,13 +148,21 @@ export interface StatsSummary {
   draftPosts: number;
   readyPosts: number;
   publishedPosts: number;
+  ideaPosts: number;
+  scheduledPosts: number;
   instagramPosts: number;
   tiktokPosts: number;
+}
+
+export interface CategoryCount {
+  category: string;
+  count: number;
 }
 
 export type ListPostsParams = {
   platform?: ListPostsPlatform;
   status?: ListPostsStatus;
+  category?: string;
 };
 
 export type ListPostsPlatform =
@@ -114,4 +181,5 @@ export const ListPostsStatus = {
   draft: "draft",
   ready: "ready",
   published: "published",
+  idea: "idea",
 } as const;

@@ -1,13 +1,17 @@
-import { useGetStatsSummary, useGetRecentActivity } from "@workspace/api-client-react";
+import { useGetStatsSummary, useGetRecentActivity, useGetPostsByCategory } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle, Activity, LayoutDashboard, Instagram, FileVideo, CheckCircle, Clock } from "lucide-react";
+import { PlusCircle, Activity, LayoutDashboard, Instagram, FileVideo, CheckCircle, Clock, CalendarDays } from "lucide-react";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from "recharts";
 
 export default function Dashboard() {
   const { data: stats, isLoading: statsLoading } = useGetStatsSummary();
   const { data: recentPosts, isLoading: recentLoading } = useGetRecentActivity();
+  const { data: categoryData, isLoading: categoryLoading } = useGetPostsByCategory();
+
+  const colors = ["hsl(320 100% 60%)", "hsl(270 100% 60%)", "hsl(190 100% 50%)", "hsl(45 100% 50%)", "hsl(160 100% 40%)"];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -29,8 +33,8 @@ export default function Dashboard() {
       </div>
 
       {statsLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
             <Card key={i} className="border-border bg-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <Skeleton className="h-4 w-24" />
@@ -43,7 +47,7 @@ export default function Dashboard() {
           ))}
         </div>
       ) : stats ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <Card className="border-border bg-card hover:border-primary/50 transition-colors duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Posts</CardTitle>
@@ -64,11 +68,20 @@ export default function Dashboard() {
           </Card>
           <Card className="border-border bg-card hover:border-green-500/50 transition-colors duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Ready & Published</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Published</CardTitle>
               <CheckCircle className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">{stats.readyPosts + stats.publishedPosts}</div>
+              <div className="text-3xl font-bold text-foreground">{stats.publishedPosts}</div>
+            </CardContent>
+          </Card>
+          <Card className="border-border bg-card hover:border-purple-500/50 transition-colors duration-300">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Scheduled</CardTitle>
+              <CalendarDays className="h-4 w-4 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">{stats.scheduledPosts}</div>
             </CardContent>
           </Card>
           <Card className="border-border bg-card hover:border-blue-500/50 transition-colors duration-300">
@@ -90,66 +103,105 @@ export default function Dashboard() {
         </div>
       ) : null}
 
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Recent Activity</h2>
-          <Link href="/posts">
-            <Button variant="link" className="text-muted-foreground hover:text-primary">
-              View All
-            </Button>
-          </Link>
-        </div>
-        
-        <div className="space-y-4">
-          {recentLoading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <Card key={i} className="bg-card border-border">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <Skeleton className="w-10 h-10 rounded-full" />
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-5 w-1/3" />
-                    <Skeleton className="h-4 w-1/4" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : recentPosts?.length === 0 ? (
-            <div className="text-center py-12 border border-dashed border-border rounded-xl bg-card/50">
-              <p className="text-muted-foreground">No recent posts found.</p>
-              <Link href="/create" className="mt-4 inline-block">
-                <Button variant="outline" className="border-primary/50 text-primary">Start creating</Button>
-              </Link>
-            </div>
-          ) : (
-            recentPosts?.map((post) => (
-              <Link key={post.id} href={`/posts/${post.id}`} className="block">
-                <Card className="bg-card border-border hover:border-primary/50 transition-all duration-200 group cursor-pointer">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">Recent Activity</h2>
+            <Link href="/posts">
+              <Button variant="link" className="text-muted-foreground hover:text-primary">
+                View All
+              </Button>
+            </Link>
+          </div>
+          
+          <div className="space-y-4">
+            {recentLoading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <Card key={i} className="bg-card border-border">
                   <CardContent className="p-4 flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                      post.platform === 'instagram' 
-                        ? 'bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 text-white'
-                        : 'bg-black text-white shadow-[0_0_5px_rgba(0,255,255,0.5)] border border-cyan-400/30'
-                    }`}>
-                      {post.platform === 'instagram' ? <Instagram className="w-5 h-5" /> : <FileVideo className="w-5 h-5" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">{post.topic}</h4>
-                      <p className="text-sm text-muted-foreground truncate">{post.context}</p>
-                    </div>
-                    <div className="shrink-0 flex items-center gap-2">
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                        post.status === 'published' ? 'bg-green-500/10 text-green-500 border border-green-500/20' :
-                        post.status === 'ready' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' :
-                        'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20'
-                      }`}>
-                        {post.status.toUpperCase()}
-                      </span>
+                    <Skeleton className="w-10 h-10 rounded-full" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-5 w-1/3" />
+                      <Skeleton className="h-4 w-1/4" />
                     </div>
                   </CardContent>
                 </Card>
-              </Link>
-            ))
-          )}
+              ))
+            ) : recentPosts?.length === 0 ? (
+              <div className="text-center py-12 border border-dashed border-border rounded-xl bg-card/50">
+                <p className="text-muted-foreground">No recent posts found.</p>
+                <Link href="/create" className="mt-4 inline-block">
+                  <Button variant="outline" className="border-primary/50 text-primary">Start creating</Button>
+                </Link>
+              </div>
+            ) : (
+              recentPosts?.map((post) => (
+                <Link key={post.id} href={`/posts/${post.id}`} className="block">
+                  <Card className="bg-card border-border hover:border-primary/50 transition-all duration-200 group cursor-pointer">
+                    <CardContent className="p-4 flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                        post.platform === 'instagram' 
+                          ? 'bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 text-white'
+                          : 'bg-black text-white shadow-[0_0_5px_rgba(0,255,255,0.5)] border border-cyan-400/30'
+                      }`}>
+                        {post.platform === 'instagram' ? <Instagram className="w-5 h-5" /> : <FileVideo className="w-5 h-5" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">{post.topic}</h4>
+                        <p className="text-sm text-muted-foreground truncate">{post.context}</p>
+                      </div>
+                      <div className="shrink-0 flex flex-col items-end gap-1">
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                          post.status === 'published' ? 'bg-green-500/10 text-green-500 border border-green-500/20' :
+                          post.status === 'ready' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' :
+                          post.status === 'idea' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' :
+                          'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20'
+                        }`}>
+                          {post.status.toUpperCase()}
+                        </span>
+                        {post.category && <span className="text-xs text-muted-foreground">{post.category}</span>}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">Categories Breakdown</h2>
+          </div>
+          <Card className="bg-card border-border">
+            <CardContent className="p-6">
+              {categoryLoading ? (
+                <Skeleton className="h-[300px] w-full" />
+              ) : categoryData && categoryData.length > 0 ? (
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={categoryData}>
+                      <XAxis dataKey="category" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+                      <Tooltip 
+                        cursor={{ fill: 'hsl(var(--muted)/0.5)' }}
+                        contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
+                      />
+                      <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                        {categoryData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                  No category data available.
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

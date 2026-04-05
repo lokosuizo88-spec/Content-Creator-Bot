@@ -9,6 +9,9 @@ import Dashboard from "@/pages/dashboard";
 import CreatePost from "@/pages/create";
 import Posts from "@/pages/posts";
 import PostDetail from "@/pages/post-detail";
+import Templates from "@/pages/templates";
+import Ideas from "@/pages/ideas";
+import CalendarPage from "@/pages/calendar";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +23,9 @@ function Router() {
         <Route path="/create" component={CreatePost} />
         <Route path="/posts" component={Posts} />
         <Route path="/posts/:id" component={PostDetail} />
+        <Route path="/templates" component={Templates} />
+        <Route path="/ideas" component={Ideas} />
+        <Route path="/calendar" component={CalendarPage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

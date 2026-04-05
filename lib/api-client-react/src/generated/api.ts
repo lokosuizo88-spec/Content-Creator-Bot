@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Social AI Content Creator API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -17,11 +17,16 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  CategoryCount,
   CreatePostBody,
+  CreateTemplateBody,
+  ExportResult,
   HealthStatus,
   ListPostsParams,
   Post,
+  RegenerateSectionBody,
   StatsSummary,
+  Template,
   UpdatePostBody,
 } from "./api.schemas";
 
@@ -35,7 +40,6 @@ type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const getHealthCheckUrl = () => {
@@ -291,6 +295,81 @@ export const useCreatePost = <
 };
 
 /**
+ * @summary Export all posts as CSV string
+ */
+export const getExportPostsUrl = () => {
+  return `/api/posts/export`;
+};
+
+export const exportPosts = async (
+  options?: RequestInit,
+): Promise<ExportResult> => {
+  return customFetch<ExportResult>(getExportPostsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getExportPostsQueryKey = () => {
+  return [`/api/posts/export`] as const;
+};
+
+export const getExportPostsQueryOptions = <
+  TData = Awaited<ReturnType<typeof exportPosts>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof exportPosts>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getExportPostsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof exportPosts>>> = ({
+    signal,
+  }) => exportPosts({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof exportPosts>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ExportPostsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof exportPosts>>
+>;
+export type ExportPostsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Export all posts as CSV string
+ */
+
+export function useExportPosts<
+  TData = Awaited<ReturnType<typeof exportPosts>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof exportPosts>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getExportPostsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary Get a post by ID
  */
 export const getGetPostUrl = (id: number) => {
@@ -539,7 +618,7 @@ export const useDeletePost = <
 };
 
 /**
- * @summary Generate AI content for a post
+ * @summary Generate AI content for a post (caption + hashtags + hooks + 3 variations)
  */
 export const getGeneratePostContentUrl = (id: number) => {
   return `/api/posts/${id}/generate`;
@@ -600,7 +679,7 @@ export type GeneratePostContentMutationResult = NonNullable<
 export type GeneratePostContentMutationError = ErrorType<unknown>;
 
 /**
- * @summary Generate AI content for a post
+ * @summary Generate AI content for a post (caption + hashtags + hooks + 3 variations)
  */
 export const useGeneratePostContent = <
   TError = ErrorType<unknown>,
@@ -620,6 +699,93 @@ export const useGeneratePostContent = <
   TContext
 > => {
   return useMutation(getGeneratePostContentMutationOptions(options));
+};
+
+/**
+ * @summary Regenerate only a specific section (caption, hashtags, or hooks)
+ */
+export const getRegenerateSectionUrl = (id: number) => {
+  return `/api/posts/${id}/regenerate-section`;
+};
+
+export const regenerateSection = async (
+  id: number,
+  regenerateSectionBody: RegenerateSectionBody,
+  options?: RequestInit,
+): Promise<Post> => {
+  return customFetch<Post>(getRegenerateSectionUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(regenerateSectionBody),
+  });
+};
+
+export const getRegenerateSectionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof regenerateSection>>,
+    TError,
+    { id: number; data: BodyType<RegenerateSectionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof regenerateSection>>,
+  TError,
+  { id: number; data: BodyType<RegenerateSectionBody> },
+  TContext
+> => {
+  const mutationKey = ["regenerateSection"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof regenerateSection>>,
+    { id: number; data: BodyType<RegenerateSectionBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return regenerateSection(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RegenerateSectionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof regenerateSection>>
+>;
+export type RegenerateSectionMutationBody = BodyType<RegenerateSectionBody>;
+export type RegenerateSectionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Regenerate only a specific section (caption, hashtags, or hooks)
+ */
+export const useRegenerateSection = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof regenerateSection>>,
+    TError,
+    { id: number; data: BodyType<RegenerateSectionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof regenerateSection>>,
+  TError,
+  { id: number; data: BodyType<RegenerateSectionBody> },
+  TContext
+> => {
+  return useMutation(getRegenerateSectionMutationOptions(options));
 };
 
 /**
@@ -704,6 +870,251 @@ export const usePublishPost = <
   TContext
 > => {
   return useMutation(getPublishPostMutationOptions(options));
+};
+
+/**
+ * @summary List all tone templates
+ */
+export const getListTemplatesUrl = () => {
+  return `/api/templates`;
+};
+
+export const listTemplates = async (
+  options?: RequestInit,
+): Promise<Template[]> => {
+  return customFetch<Template[]>(getListTemplatesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListTemplatesQueryKey = () => {
+  return [`/api/templates`] as const;
+};
+
+export const getListTemplatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTemplates>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listTemplates>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListTemplatesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listTemplates>>> = ({
+    signal,
+  }) => listTemplates({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listTemplates>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListTemplatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listTemplates>>
+>;
+export type ListTemplatesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all tone templates
+ */
+
+export function useListTemplates<
+  TData = Awaited<ReturnType<typeof listTemplates>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listTemplates>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListTemplatesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a tone template
+ */
+export const getCreateTemplateUrl = () => {
+  return `/api/templates`;
+};
+
+export const createTemplate = async (
+  createTemplateBody: CreateTemplateBody,
+  options?: RequestInit,
+): Promise<Template> => {
+  return customFetch<Template>(getCreateTemplateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createTemplateBody),
+  });
+};
+
+export const getCreateTemplateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createTemplate>>,
+    TError,
+    { data: BodyType<CreateTemplateBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createTemplate>>,
+  TError,
+  { data: BodyType<CreateTemplateBody> },
+  TContext
+> => {
+  const mutationKey = ["createTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createTemplate>>,
+    { data: BodyType<CreateTemplateBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createTemplate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createTemplate>>
+>;
+export type CreateTemplateMutationBody = BodyType<CreateTemplateBody>;
+export type CreateTemplateMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a tone template
+ */
+export const useCreateTemplate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createTemplate>>,
+    TError,
+    { data: BodyType<CreateTemplateBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createTemplate>>,
+  TError,
+  { data: BodyType<CreateTemplateBody> },
+  TContext
+> => {
+  return useMutation(getCreateTemplateMutationOptions(options));
+};
+
+/**
+ * @summary Delete a template
+ */
+export const getDeleteTemplateUrl = (id: number) => {
+  return `/api/templates/${id}`;
+};
+
+export const deleteTemplate = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteTemplateUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteTemplateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteTemplate>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteTemplate>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteTemplate>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteTemplate(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteTemplate>>
+>;
+
+export type DeleteTemplateMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a template
+ */
+export const useDeleteTemplate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteTemplate>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteTemplate>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteTemplateMutationOptions(options));
 };
 
 /**
@@ -848,6 +1259,156 @@ export function useGetRecentActivity<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetRecentActivityQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get post count grouped by category
+ */
+export const getGetPostsByCategoryUrl = () => {
+  return `/api/stats/by-category`;
+};
+
+export const getPostsByCategory = async (
+  options?: RequestInit,
+): Promise<CategoryCount[]> => {
+  return customFetch<CategoryCount[]>(getGetPostsByCategoryUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPostsByCategoryQueryKey = () => {
+  return [`/api/stats/by-category`] as const;
+};
+
+export const getGetPostsByCategoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPostsByCategory>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPostsByCategory>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPostsByCategoryQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getPostsByCategory>>
+  > = ({ signal }) => getPostsByCategory({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPostsByCategory>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPostsByCategoryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPostsByCategory>>
+>;
+export type GetPostsByCategoryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get post count grouped by category
+ */
+
+export function useGetPostsByCategory<
+  TData = Awaited<ReturnType<typeof getPostsByCategory>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getPostsByCategory>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPostsByCategoryQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get upcoming scheduled posts
+ */
+export const getGetScheduledPostsUrl = () => {
+  return `/api/stats/scheduled`;
+};
+
+export const getScheduledPosts = async (
+  options?: RequestInit,
+): Promise<Post[]> => {
+  return customFetch<Post[]>(getGetScheduledPostsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetScheduledPostsQueryKey = () => {
+  return [`/api/stats/scheduled`] as const;
+};
+
+export const getGetScheduledPostsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getScheduledPosts>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getScheduledPosts>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetScheduledPostsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getScheduledPosts>>
+  > = ({ signal }) => getScheduledPosts({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getScheduledPosts>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetScheduledPostsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getScheduledPosts>>
+>;
+export type GetScheduledPostsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get upcoming scheduled posts
+ */
+
+export function useGetScheduledPosts<
+  TData = Awaited<ReturnType<typeof getScheduledPosts>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getScheduledPosts>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetScheduledPostsQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

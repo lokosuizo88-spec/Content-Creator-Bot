@@ -3,9 +3,10 @@
  * Do not edit manually.
  * Api
  * Social AI Content Creator API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import type { CreatePostBodyPlatform } from "./createPostBodyPlatform";
+import type { CreatePostBodyStatus } from "./createPostBodyStatus";
 
 export interface CreatePostBody {
   topic: string;
@@ -13,4 +14,7 @@ export interface CreatePostBody {
   platform: CreatePostBodyPlatform;
   tone?: string | null;
   targetAudience?: string | null;
+  category?: string | null;
+  scheduledAt?: string | null;
+  status?: CreatePostBodyStatus;
 }

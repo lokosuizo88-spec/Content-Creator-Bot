@@ -6,9 +6,11 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export type PostStatus = (typeof PostStatus)[keyof typeof PostStatus];
+export type CreatePostBodyStatus =
+  | (typeof CreatePostBodyStatus)[keyof typeof CreatePostBodyStatus]
+  | null;
 
-export const PostStatus = {
+export const CreatePostBodyStatus = {
   draft: "draft",
   ready: "ready",
   published: "published",

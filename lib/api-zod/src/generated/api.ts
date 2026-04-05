@@ -3,12 +3,11 @@
  * Do not edit manually.
  * Api
  * Social AI Content Creator API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import * as zod from "zod";
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
@@ -20,7 +19,8 @@ export const HealthCheckResponse = zod.object({
  */
 export const ListPostsQueryParams = zod.object({
   platform: zod.enum(["instagram", "tiktok", "all"]).optional(),
-  status: zod.enum(["draft", "ready", "published"]).optional(),
+  status: zod.enum(["draft", "ready", "published", "idea"]).optional(),
+  category: zod.coerce.string().optional(),
 });
 
 export const ListPostsResponseItem = zod.object({
@@ -28,12 +28,15 @@ export const ListPostsResponseItem = zod.object({
   topic: zod.string(),
   context: zod.string(),
   platform: zod.enum(["instagram", "tiktok"]),
-  status: zod.enum(["draft", "ready", "published"]),
+  status: zod.enum(["draft", "ready", "published", "idea"]),
+  category: zod.string().nullish(),
   generatedCaption: zod.string().nullish(),
   generatedHashtags: zod.string().nullish(),
   generatedHooks: zod.string().nullish(),
+  generatedVariations: zod.string().nullish(),
   tone: zod.string().nullish(),
   targetAudience: zod.string().nullish(),
+  scheduledAt: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -48,6 +51,17 @@ export const CreatePostBody = zod.object({
   platform: zod.enum(["instagram", "tiktok"]),
   tone: zod.string().nullish(),
   targetAudience: zod.string().nullish(),
+  category: zod.string().nullish(),
+  scheduledAt: zod.string().nullish(),
+  status: zod.enum(["draft", "ready", "published", "idea"]).nullish(),
+});
+
+/**
+ * @summary Export all posts as CSV string
+ */
+export const ExportPostsResponse = zod.object({
+  csv: zod.string(),
+  filename: zod.string(),
 });
 
 /**
@@ -62,12 +76,15 @@ export const GetPostResponse = zod.object({
   topic: zod.string(),
   context: zod.string(),
   platform: zod.enum(["instagram", "tiktok"]),
-  status: zod.enum(["draft", "ready", "published"]),
+  status: zod.enum(["draft", "ready", "published", "idea"]),
+  category: zod.string().nullish(),
   generatedCaption: zod.string().nullish(),
   generatedHashtags: zod.string().nullish(),
   generatedHooks: zod.string().nullish(),
+  generatedVariations: zod.string().nullish(),
   tone: zod.string().nullish(),
   targetAudience: zod.string().nullish(),
+  scheduledAt: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -85,10 +102,13 @@ export const UpdatePostBody = zod.object({
   platform: zod.enum(["instagram", "tiktok"]).optional(),
   tone: zod.string().nullish(),
   targetAudience: zod.string().nullish(),
-  status: zod.enum(["draft", "ready", "published"]).optional(),
+  category: zod.string().nullish(),
+  status: zod.enum(["draft", "ready", "published", "idea"]).optional(),
+  scheduledAt: zod.string().nullish(),
   generatedCaption: zod.string().nullish(),
   generatedHashtags: zod.string().nullish(),
   generatedHooks: zod.string().nullish(),
+  generatedVariations: zod.string().nullish(),
 });
 
 export const UpdatePostResponse = zod.object({
@@ -96,12 +116,15 @@ export const UpdatePostResponse = zod.object({
   topic: zod.string(),
   context: zod.string(),
   platform: zod.enum(["instagram", "tiktok"]),
-  status: zod.enum(["draft", "ready", "published"]),
+  status: zod.enum(["draft", "ready", "published", "idea"]),
+  category: zod.string().nullish(),
   generatedCaption: zod.string().nullish(),
   generatedHashtags: zod.string().nullish(),
   generatedHooks: zod.string().nullish(),
+  generatedVariations: zod.string().nullish(),
   tone: zod.string().nullish(),
   targetAudience: zod.string().nullish(),
+  scheduledAt: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -114,7 +137,7 @@ export const DeletePostParams = zod.object({
 });
 
 /**
- * @summary Generate AI content for a post
+ * @summary Generate AI content for a post (caption + hashtags + hooks + 3 variations)
  */
 export const GeneratePostContentParams = zod.object({
   id: zod.coerce.number(),
@@ -125,12 +148,44 @@ export const GeneratePostContentResponse = zod.object({
   topic: zod.string(),
   context: zod.string(),
   platform: zod.enum(["instagram", "tiktok"]),
-  status: zod.enum(["draft", "ready", "published"]),
+  status: zod.enum(["draft", "ready", "published", "idea"]),
+  category: zod.string().nullish(),
   generatedCaption: zod.string().nullish(),
   generatedHashtags: zod.string().nullish(),
   generatedHooks: zod.string().nullish(),
+  generatedVariations: zod.string().nullish(),
   tone: zod.string().nullish(),
   targetAudience: zod.string().nullish(),
+  scheduledAt: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Regenerate only a specific section (caption, hashtags, or hooks)
+ */
+export const RegenerateSectionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const RegenerateSectionBody = zod.object({
+  section: zod.enum(["caption", "hashtags", "hooks", "variations"]),
+});
+
+export const RegenerateSectionResponse = zod.object({
+  id: zod.number(),
+  topic: zod.string(),
+  context: zod.string(),
+  platform: zod.enum(["instagram", "tiktok"]),
+  status: zod.enum(["draft", "ready", "published", "idea"]),
+  category: zod.string().nullish(),
+  generatedCaption: zod.string().nullish(),
+  generatedHashtags: zod.string().nullish(),
+  generatedHooks: zod.string().nullish(),
+  generatedVariations: zod.string().nullish(),
+  tone: zod.string().nullish(),
+  targetAudience: zod.string().nullish(),
+  scheduledAt: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -147,14 +202,49 @@ export const PublishPostResponse = zod.object({
   topic: zod.string(),
   context: zod.string(),
   platform: zod.enum(["instagram", "tiktok"]),
-  status: zod.enum(["draft", "ready", "published"]),
+  status: zod.enum(["draft", "ready", "published", "idea"]),
+  category: zod.string().nullish(),
   generatedCaption: zod.string().nullish(),
   generatedHashtags: zod.string().nullish(),
   generatedHooks: zod.string().nullish(),
+  generatedVariations: zod.string().nullish(),
   tone: zod.string().nullish(),
   targetAudience: zod.string().nullish(),
+  scheduledAt: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
+});
+
+/**
+ * @summary List all tone templates
+ */
+export const ListTemplatesResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  tone: zod.string(),
+  targetAudience: zod.string().nullish(),
+  category: zod.string().nullish(),
+  platform: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+export const ListTemplatesResponse = zod.array(ListTemplatesResponseItem);
+
+/**
+ * @summary Create a tone template
+ */
+export const CreateTemplateBody = zod.object({
+  name: zod.string(),
+  tone: zod.string(),
+  targetAudience: zod.string().nullish(),
+  category: zod.string().nullish(),
+  platform: zod.string().nullish(),
+});
+
+/**
+ * @summary Delete a template
+ */
+export const DeleteTemplateParams = zod.object({
+  id: zod.coerce.number(),
 });
 
 /**
@@ -165,6 +255,8 @@ export const GetStatsSummaryResponse = zod.object({
   draftPosts: zod.number(),
   readyPosts: zod.number(),
   publishedPosts: zod.number(),
+  ideaPosts: zod.number(),
+  scheduledPosts: zod.number(),
   instagramPosts: zod.number(),
   tiktokPosts: zod.number(),
 });
@@ -177,15 +269,53 @@ export const GetRecentActivityResponseItem = zod.object({
   topic: zod.string(),
   context: zod.string(),
   platform: zod.enum(["instagram", "tiktok"]),
-  status: zod.enum(["draft", "ready", "published"]),
+  status: zod.enum(["draft", "ready", "published", "idea"]),
+  category: zod.string().nullish(),
   generatedCaption: zod.string().nullish(),
   generatedHashtags: zod.string().nullish(),
   generatedHooks: zod.string().nullish(),
+  generatedVariations: zod.string().nullish(),
   tone: zod.string().nullish(),
   targetAudience: zod.string().nullish(),
+  scheduledAt: zod.string().nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
 export const GetRecentActivityResponse = zod.array(
   GetRecentActivityResponseItem,
+);
+
+/**
+ * @summary Get post count grouped by category
+ */
+export const GetPostsByCategoryResponseItem = zod.object({
+  category: zod.string(),
+  count: zod.number(),
+});
+export const GetPostsByCategoryResponse = zod.array(
+  GetPostsByCategoryResponseItem,
+);
+
+/**
+ * @summary Get upcoming scheduled posts
+ */
+export const GetScheduledPostsResponseItem = zod.object({
+  id: zod.number(),
+  topic: zod.string(),
+  context: zod.string(),
+  platform: zod.enum(["instagram", "tiktok"]),
+  status: zod.enum(["draft", "ready", "published", "idea"]),
+  category: zod.string().nullish(),
+  generatedCaption: zod.string().nullish(),
+  generatedHashtags: zod.string().nullish(),
+  generatedHooks: zod.string().nullish(),
+  generatedVariations: zod.string().nullish(),
+  tone: zod.string().nullish(),
+  targetAudience: zod.string().nullish(),
+  scheduledAt: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+export const GetScheduledPostsResponse = zod.array(
+  GetScheduledPostsResponseItem,
 );
