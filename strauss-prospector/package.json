@@ -1,0 +1,8 @@
+{
+  "name": "strauss-prospector",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "start": "node src/index.mjs" },
+  "dependencies": { "playwright": "^1.49.0" }
+}
