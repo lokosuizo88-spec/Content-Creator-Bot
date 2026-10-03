@@ -12,7 +12,7 @@ export async function gemini(prompt, { json = false, retries = 6 } = {}) {
     const wait = last + GAP_MS - Date.now();
     if (wait > 0) await sleep(wait);
     last = Date.now();
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`, {
+    const r = await fetch(`${process.env.GEMINI_URL || "https://generativelanguage.googleapis.com"}/v1beta/models/${MODEL}:generateContent?key=${key}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({

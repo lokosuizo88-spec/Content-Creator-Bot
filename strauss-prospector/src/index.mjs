@@ -19,6 +19,7 @@ const PROYECTO = env("CF_PROJECT", "strauss-demos");
 const dir = `salida/${new Date().toISOString().slice(0, 10)}-${slug(SECTOR)}-${slug(ZONA)}`;
 await mkdir(`${dir}/demos`, { recursive: true });
 await mkdir(`${dir}/emails`, { recursive: true });
+await mkdir(`${dir}/capturas`, { recursive: true });
 
 console.log(`▶ Buscando "${SECTOR}" en ${ZONA}…`);
 const todos = await buscar(SECTOR, ZONA, REVISAR);
@@ -40,7 +41,7 @@ for (const r of res) {
   if (hechas < DEMOS && r.web && !r.audit.flags.includes("web_caida")) {
     try {
       process.stdout.write(`  · ${r.nombre}: marca… `);
-      const marca = await extraerMarca(r.web, `${dir}/demos/${r.id}-original.png`);
+      const marca = await extraerMarca(r.web, `${dir}/capturas/${r.id}.png`);
       process.stdout.write("textos… ");
       const t = await generarTextos(r, marca);
       await mkdir(`${dir}/demos/${r.id}`, { recursive: true });
