@@ -1,4 +1,5 @@
 import { fetchText } from "./util.mjs";
+import { paginaRenderizada } from "./brand.mjs";
 
 const CHATBOTS = {
   Tidio: /code\.tidio\.co|tidiochat/i,
@@ -80,7 +81,12 @@ export async function auditar(neg, { visual } = {}) {
   const flags = [];
   const info = { chatbot: null, reserva: false, idiomas: 1 };
   if (!neg.web) return { flags: ["web_caida"], pts: PROBLEMAS.web_caida.pts, info, motivo: "sin web" };
-  const r = await fetchText(neg.web);
+  let r = await fetchText(neg.web);
+  if (!r.ok || r.html.length < 500) {
+    // 403/anti-bot no significa web caída: reintentar con navegador real
+    const rr = await paginaRenderizada(neg.web);
+    if (rr.ok && rr.html.length >= 500) r = rr;
+  }
   if (!r.ok || r.html.length < 500) return { flags: ["web_caida"], pts: PROBLEMAS.web_caida.pts, info, motivo: r.error || `HTTP ${r.status}` };
   const h = r.html;
   if (r.ms > 4000) flags.push("lenta");

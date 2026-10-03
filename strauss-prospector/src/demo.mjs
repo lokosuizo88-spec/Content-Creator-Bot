@@ -1,6 +1,7 @@
 import { gemini } from "./gemini.mjs";
 import { esc } from "./util.mjs";
 
+const cssUrl = (u) => esc(u).replace(/'/g, "%27");
 const hash = (s) => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
 
 function lum(hex) { const n = parseInt(hex.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; }
@@ -37,10 +38,10 @@ export function renderDemo(neg, marca, t) {
   const logo = marca.logo ? `<img class="logo" src="${esc(marca.logo)}" alt="${esc(neg.nombre)}" onerror="this.replaceWith(document.createTextNode('${esc(neg.nombre).replace(/'/g, "")}'))">` : esc(neg.nombre);
   const hero =
     v === "split"
-      ? `<section class="hero split"><div class="txt"><h1>${esc(t.eslogan)}</h1><p>${esc(t.hero)}</p><a class="btn" href="#cita">${esc(t.cta)}</a></div><div class="img" style="background-image:url('${esc(foto)}')"></div></section>`
+      ? `<section class="hero split"><div class="txt"><h1>${esc(t.eslogan)}</h1><p>${esc(t.hero)}</p><a class="btn" href="#cita">${esc(t.cta)}</a></div><div class="img" style="background-image:url('${cssUrl(foto)}')"></div></section>`
       : v === "centrado"
-        ? `<section class="hero centrado" style="background-image:linear-gradient(${c1}cc,${c1}cc),url('${esc(foto)}')"><h1>${esc(t.eslogan)}</h1><p>${esc(t.hero)}</p><a class="btn alt" href="#cita">${esc(t.cta)}</a></section>`
-        : `<section class="hero editorial"><div class="img" style="background-image:url('${esc(foto)}')"></div><div class="txt"><small>${esc(neg.direccion || "")}</small><h1>${esc(t.eslogan)}</h1><p>${esc(t.hero)}</p><a class="btn" href="#cita">${esc(t.cta)}</a></div></section>`;
+        ? `<section class="hero centrado" style="background-image:linear-gradient(${c1}cc,${c1}cc),url('${cssUrl(foto)}')"><h1>${esc(t.eslogan)}</h1><p>${esc(t.hero)}</p><a class="btn alt" href="#cita">${esc(t.cta)}</a></section>`
+        : `<section class="hero editorial"><div class="img" style="background-image:url('${cssUrl(foto)}')"></div><div class="txt"><small>${esc(neg.direccion || "")}</small><h1>${esc(t.eslogan)}</h1><p>${esc(t.hero)}</p><a class="btn" href="#cita">${esc(t.cta)}</a></div></section>`;
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(neg.nombre)} — propuesta de web</title>
 <link href="https://fonts.googleapis.com/css2?${fonts}&display=swap" rel="stylesheet"><style>
 :root{--ease:cubic-bezier(.23,1,.32,1);--c1:${c1};--c2:${c2};--on:${onC1};--fh:'${fh}',serif;--fb:'${fb}',sans-serif}

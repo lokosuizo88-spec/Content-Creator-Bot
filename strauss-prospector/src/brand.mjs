@@ -1,15 +1,32 @@
 import { chromium } from "playwright";
 
+const lanzar = () => chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
+
+/** HTML renderizado con navegador real: para webs que bloquean fetch (403/anti-bot). */
+export async function paginaRenderizada(url) {
+  const b = await lanzar();
+  try {
+    const page = await b.newPage();
+    const t0 = Date.now();
+    const r = await page.goto(url, { waitUntil: "networkidle", timeout: 40000 });
+    return { ok: !!r && r.status() < 400, status: r?.status() ?? 0, html: await page.content(), ms: Date.now() - t0 };
+  } catch (e) {
+    return { ok: false, status: 0, html: "", ms: 0, error: e.message };
+  } finally {
+    await b.close();
+  }
+}
+
 /** Abre la web real y extrae identidad: logo, colores, fuentes, fotos, textos de servicios. Devuelve también captura. */
 export async function extraerMarca(url, shotPath) {
-  const browser = await chromium.launch();
+  const browser = await lanzar();
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await page.goto(url, { waitUntil: "networkidle", timeout: 40000 }).catch(() => {});
     await page.waitForTimeout(1500);
     if (shotPath) await page.screenshot({ path: shotPath }).catch(() => {});
     const d = await page.evaluate(() => {
-      const abs = (u) => { try { return new URL(u, location.href).href; } catch { return null; } };
+      const abs = (u) => { if (!u) return null; try { return new URL(u, location.href).href; } catch { return null; } };
       const css = (el, p) => getComputedStyle(el)[p];
       const rgb = (s) => (s.match(/\d+(\.\d+)?/g) || []).slice(0, 3).map(Number);
       const hex = (a) => "#" + a.map((n) => Math.round(n).toString(16).padStart(2, "0")).join("");
