@@ -10,7 +10,7 @@ export function redactarEmail(neg, audit, demoUrl) {
 
 Hola, equipo de ${neg.nombre}:
 
-Soy Diego, de Strauss Digital. Os encontré en Google (${neg.nota}★ con ${neg.resenas} reseñas, muy buen trabajo) y revisé vuestra web ${neg.web || ""}. ${extra.join(" ")}
+Soy Diego, de Strauss Digital. Os encontré en Google (${neg.nota}★ con ${neg.resenas} reseñas, muy buen trabajo) ${neg.web ? `y revisé vuestra web ${neg.web}.` : "y vi que no tenéis web propia enlazada."} ${extra.join(" ")}
 
 Esto es lo que he visto:
 
