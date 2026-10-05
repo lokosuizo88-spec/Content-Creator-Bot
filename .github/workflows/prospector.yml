@@ -37,7 +37,7 @@ jobs:
             [[ -n "$CLOUDFLARE_ACCOUNT_ID" ]] || missing+=("CLOUDFLARE_ACCOUNT_ID")
           fi
           if (("${#missing[@]}" > 0)); then
-            printf 'Faltan secretos de Actions: %s\\n' "${missing[*]}" >&2
+            printf 'Faltan secretos de Actions: %s\n' "${missing[*]}" >&2
             exit 1
           fi
           echo "Secretos necesarios disponibles."
