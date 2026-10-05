@@ -17,6 +17,30 @@ jobs:
     defaults: { run: { working-directory: strauss-prospector } }
     steps:
       - uses: actions/checkout@v4
+      - name: Comprobar secretos necesarios
+        shell: bash
+        env:
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DEMOS: ${{ inputs.demos || '3' }}
+          PUBLICAR: ${{ inputs.publicar || 'n' }}
+        run: |
+          missing=()
+          [[ -n "$GOOGLE_PLACES_API_KEY" ]] || missing+=("GOOGLE_PLACES_API_KEY")
+          if [[ "${DEMOS:-3}" != "0" ]]; then
+            [[ -n "$GEMINI_API_KEY" ]] || missing+=("GEMINI_API_KEY")
+          fi
+          if [[ "${PUBLICAR:-n}" =~ ^(s|si|true|1)$ ]]; then
+            [[ -n "$CLOUDFLARE_API_TOKEN" ]] || missing+=("CLOUDFLARE_API_TOKEN")
+            [[ -n "$CLOUDFLARE_ACCOUNT_ID" ]] || missing+=("CLOUDFLARE_ACCOUNT_ID")
+          fi
+          if (("${#missing[@]}" > 0)); then
+            printf 'Faltan secretos de Actions: %s\\n' "${missing[*]}" >&2
+            exit 1
+          fi
+          echo "Secretos necesarios disponibles."
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm install
