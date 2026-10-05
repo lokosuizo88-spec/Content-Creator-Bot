@@ -54,6 +54,11 @@ export async function extraerMarca(url, shotPath) {
         .map((i) => abs(i.currentSrc || i.src)).filter(Boolean);
       const og = abs(document.querySelector('meta[property="og:image"]')?.content);
       if (og) fotos.unshift(og);
+      const bgc = rgb(css(document.body, 'backgroundColor') === 'rgba(0, 0, 0, 0)' ? css(document.documentElement, 'backgroundColor') : css(document.body, 'backgroundColor'));
+      const bgLum = bgc.length >= 3 && !/rgba\(0, 0, 0, 0\)/.test(css(document.documentElement, 'backgroundColor') + css(document.body, 'backgroundColor')) ? (0.299 * bgc[0] + 0.587 * bgc[1] + 0.114 * bgc[2]) / 255 : 1;
+      const btn = document.querySelector('a[class*=btn],button,a[class*=button]');
+      const radio = btn ? Math.min(40, parseFloat(css(btn, 'borderRadius')) || 0) : null;
+      const mayus = css(document.querySelector('h1,h2') || document.body, 'textTransform') === 'uppercase';
       const body = css(document.body, "fontFamily");
       const head = css(document.querySelector("h1,h2") || document.body, "fontFamily");
       const textos = [...document.querySelectorAll("h1,h2,h3,li,p")].map((e) => e.innerText.trim()).filter((t) => t.length > 8 && t.length < 160).slice(0, 80);
@@ -66,6 +71,9 @@ export async function extraerMarca(url, shotPath) {
         fuenteTitulo: head.split(",")[0].replace(/["']/g, "").trim(),
         fuenteCuerpo: body.split(",")[0].replace(/["']/g, "").trim(),
         textos,
+        oscuro: bgLum < 0.35,
+        radio,
+        mayus,
       };
     });
     return d;

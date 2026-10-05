@@ -46,7 +46,7 @@ for (const r of res) {
       process.stdout.write("textos… ");
       const t = await generarTextos(r, marca);
       await mkdir(`${dir}/demos/${r.id}`, { recursive: true });
-      await writeFile(`${dir}/demos/${r.id}/index.html`, renderDemo(r, marca, t));
+      await writeFile(`${dir}/demos/${r.id}/index.html`, renderDemo(r, marca, t, hechas));
       r.demo = true;
       r.marca = marca;
       hechas++;
