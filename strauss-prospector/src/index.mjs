@@ -69,6 +69,14 @@ for (const r of res.filter((x) => x.audit.flags.length && x.audit.pts >= MIN_PTS
   await writeFile(`${dir}/emails/${r.id}.txt`, r.email);
 }
 
+const csvq = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+const envios = res.filter((r) => r.email);
+await writeFile(
+  `${dir}/envios.csv`,
+  "\uFEFFpara,asunto,cuerpo,demo\n" +
+    envios.map((r) => { const m = r.email.match(/^Para: .*\nAsunto: (.*)\n\n([\s\S]*)$/); return [r.audit.info.email || "", m?.[1], m?.[2], r.demo ? `${BASE_URL || `https://${PROYECTO}.pages.dev`}/${r.id}/` : ""].map(csvq).join(","); }).join("\n"),
+);
+
 const filas = res
   .map(
     (r) => `<tr><td><b>${esc(r.nombre)}</b><br><small>${esc(r.web || "sin web")}</small></td><td>${r.audit.pts}</td>

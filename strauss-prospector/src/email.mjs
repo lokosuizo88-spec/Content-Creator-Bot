@@ -6,7 +6,8 @@ export function redactarEmail(neg, audit, demoUrl) {
   const extra = [];
   if (audit.info.chatbot) extra.push(`He visto que usáis ${audit.info.chatbot} en la web.`);
   const items = fl.map((f) => `• ${PROBLEMAS[f].problema}\n  → ${PROBLEMAS[f].solucion}`).join("\n\n");
-  return `Asunto: He revisado la web de ${neg.nombre}${demoUrl ? " (y te he preparado algo)" : ""}
+  return `Para: ${audit.info.email || "[sin correo encontrado]"}
+Asunto: He revisado la web de ${neg.nombre}${demoUrl ? " (y te he preparado algo)" : ""}
 
 Hola, equipo de ${neg.nombre}:
 

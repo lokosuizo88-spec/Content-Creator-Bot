@@ -82,6 +82,16 @@ export const PROBLEMAS = {
   },
 };
 
+const RE_MAIL = /[a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}/gi;
+const MAL_MAIL = /\.(png|jpe?g|gif|webp|svg|css|js)$|sentry|wixpress|example\.|@2x|u00|noreply|no-reply|godaddy|domain\.com|tuemail|email\.com/i;
+/** Primer correo de contacto razonable en el HTML (prioriza mailto: y el dominio de la propia web). */
+export function extraerEmail(html, web) {
+  const host = (() => { try { return new URL(web).hostname.replace(/^www\./, ""); } catch { return ""; } })();
+  const mailto = [...html.matchAll(/mailto:([^"'?\s>]+)/gi)].map((m) => decodeURIComponent(m[1]));
+  const todos = [...new Set([...mailto, ...(html.match(RE_MAIL) || [])].map((m) => m.toLowerCase().trim()))].filter((m) => !MAL_MAIL.test(m));
+  return todos.find((m) => host && m.endsWith(host)) || todos[0] || null;
+}
+
 export async function auditar(neg, { visual } = {}) {
   const flags = [];
   const info = { chatbot: null, reserva: false, idiomas: 1 };
@@ -94,6 +104,13 @@ export async function auditar(neg, { visual } = {}) {
   }
   if (!r.ok || r.html.length < 500) return { flags: ["web_caida"], pts: PROBLEMAS.web_caida.pts, info, motivo: r.error || `HTTP ${r.status}` };
   const h = r.html;
+  info.email = extraerEmail(h, neg.web);
+  if (!info.email) {
+    for (const path of ["/contacto", "/contact", "/contacta", "/contactar"]) {
+      const c = await fetchText(new URL(path, neg.web).href, 10000);
+      if (c.ok && (info.email = extraerEmail(c.html, neg.web))) break;
+    }
+  }
   if (r.ms > 4000) flags.push("lenta");
   const langs = new Set([...h.matchAll(/hreflang=["']([a-z]{2})/gi)].map((m) => m[1].toLowerCase()));
   info.idiomas = Math.max(1, langs.size);
