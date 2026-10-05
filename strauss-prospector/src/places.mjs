@@ -4,7 +4,7 @@ export async function buscar(sector, zona, max) {
   const out = [];
   let pageToken;
   do {
-    const r = await fetch("https://places.googleapis.com/v1/places:searchText", {
+    const r = await fetch(process.env.PLACES_URL || "https://places.googleapis.com/v1/places:searchText", {
       method: "POST",
       headers: {
         "content-type": "application/json",

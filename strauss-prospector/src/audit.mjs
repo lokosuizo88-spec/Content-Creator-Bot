@@ -1,4 +1,5 @@
 import { fetchText } from "./util.mjs";
+import { paginaRenderizada } from "./brand.mjs";
 
 const CHATBOTS = {
   Tidio: /code\.tidio\.co|tidiochat/i,
@@ -21,6 +22,11 @@ const KIT_DIGITAL = /kit\s*digital|next\s*generation|financiado\s*por\s*la\s*uni
 
 /** Textos para el email: problema + solución. */
 export const PROBLEMAS = {
+  sin_web: {
+    pts: 6,
+    problema: "No he encontrado una web propia enlazada en vuestra ficha de Google: quien os busca no puede ver tratamientos, precios ni pedir cita.",
+    solucion: "Una web propia sencilla y rápida, con tratamientos, reseñas reales y reserva online, enlazada desde Google Maps.",
+  },
   web_caida: {
     pts: 5,
     problema: "Tu web no carga o devuelve errores, así que quien te busca en Google se va a la competencia.",
@@ -79,8 +85,13 @@ export const PROBLEMAS = {
 export async function auditar(neg, { visual } = {}) {
   const flags = [];
   const info = { chatbot: null, reserva: false, idiomas: 1 };
-  if (!neg.web) return { flags: ["web_caida"], pts: PROBLEMAS.web_caida.pts, info, motivo: "sin web" };
-  const r = await fetchText(neg.web);
+  if (!neg.web) return { flags: ["sin_web"], pts: PROBLEMAS.sin_web.pts, info, motivo: "sin web" };
+  let r = await fetchText(neg.web);
+  if (!r.ok || r.html.length < 500) {
+    // 403/anti-bot no significa web caída: reintentar con navegador real
+    const rr = await paginaRenderizada(neg.web);
+    if (rr.ok && rr.html.length >= 500) r = rr;
+  }
   if (!r.ok || r.html.length < 500) return { flags: ["web_caida"], pts: PROBLEMAS.web_caida.pts, info, motivo: r.error || `HTTP ${r.status}` };
   const h = r.html;
   if (r.ms > 4000) flags.push("lenta");

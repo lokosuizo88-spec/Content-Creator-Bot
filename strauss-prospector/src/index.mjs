@@ -14,11 +14,13 @@ const REVISAR = Number(env("REVISAR", 20));
 const DEMOS = Number(env("DEMOS", 3));
 const PUBLICAR = /^(s|si|true|1)$/i.test(env("PUBLICAR", "n"));
 const BASE_URL = env("DEMOS_BASE_URL", ""); // p.ej. https://demos.straussdigital.com
+const MIN_PTS = Number(env("MIN_PTS", 3)); // sin problemas relevantes no se prospecta
 const PROYECTO = env("CF_PROJECT", "strauss-demos");
 
 const dir = `salida/${new Date().toISOString().slice(0, 10)}-${slug(SECTOR)}-${slug(ZONA)}`;
 await mkdir(`${dir}/demos`, { recursive: true });
 await mkdir(`${dir}/emails`, { recursive: true });
+await mkdir(`${dir}/capturas`, { recursive: true });
 
 console.log(`▶ Buscando "${SECTOR}" en ${ZONA}…`);
 const todos = await buscar(SECTOR, ZONA, REVISAR);
@@ -37,14 +39,14 @@ console.log(`\n▶ Construyendo hasta ${DEMOS} demos…`);
 let hechas = 0;
 for (const r of res) {
   r.id = slug(r.nombre);
-  if (hechas < DEMOS && r.web && !r.audit.flags.includes("web_caida")) {
+  if (hechas < DEMOS && r.web && r.audit.pts >= MIN_PTS && !r.audit.flags.includes("web_caida")) {
     try {
       process.stdout.write(`  · ${r.nombre}: marca… `);
-      const marca = await extraerMarca(r.web, `${dir}/demos/${r.id}-original.png`);
+      const marca = await extraerMarca(r.web, `${dir}/capturas/${r.id}.png`);
       process.stdout.write("textos… ");
       const t = await generarTextos(r, marca);
       await mkdir(`${dir}/demos/${r.id}`, { recursive: true });
-      await writeFile(`${dir}/demos/${r.id}/index.html`, renderDemo(r, marca, t));
+      await writeFile(`${dir}/demos/${r.id}/index.html`, renderDemo(r, marca, t, hechas));
       r.demo = true;
       r.marca = marca;
       hechas++;
@@ -61,7 +63,7 @@ if (PUBLICAR && hechas) {
   execSync(`npx --yes wrangler@4 pages deploy "${dir}/demos" --project-name ${PROYECTO} --branch main --commit-dirty=true`, { stdio: "inherit" });
 }
 
-for (const r of res) {
+for (const r of res.filter((x) => x.audit.flags.length && x.audit.pts >= MIN_PTS)) {
   const url = r.demo ? `${BASE_URL || `https://${PROYECTO}.pages.dev`}/${r.id}/` : "";
   r.email = redactarEmail(r, r.audit, url);
   await writeFile(`${dir}/emails/${r.id}.txt`, r.email);

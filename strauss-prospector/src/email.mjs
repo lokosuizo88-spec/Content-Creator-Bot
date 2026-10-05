@@ -6,11 +6,11 @@ export function redactarEmail(neg, audit, demoUrl) {
   const extra = [];
   if (audit.info.chatbot) extra.push(`He visto que usáis ${audit.info.chatbot} en la web.`);
   const items = fl.map((f) => `• ${PROBLEMAS[f].problema}\n  → ${PROBLEMAS[f].solucion}`).join("\n\n");
-  return `Asunto: He revisado la web de ${neg.nombre} (y te he preparado algo)
+  return `Asunto: He revisado la web de ${neg.nombre}${demoUrl ? " (y te he preparado algo)" : ""}
 
 Hola, equipo de ${neg.nombre}:
 
-Soy Diego, de Strauss Digital. Os encontré en Google (${neg.nota}★ con ${neg.resenas} reseñas, muy buen trabajo) y revisé vuestra web ${neg.web || ""}. ${extra.join(" ")}
+Soy Diego, de Strauss Digital. Os encontré en Google (${neg.nota}★ con ${neg.resenas} reseñas, muy buen trabajo) ${neg.web ? `y revisé vuestra web ${neg.web}.` : "y vi que no tenéis web propia enlazada."} ${extra.join(" ")}
 
 Esto es lo que he visto:
 

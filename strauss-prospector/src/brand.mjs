@@ -1,15 +1,32 @@
 import { chromium } from "playwright";
 
+const lanzar = () => chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
+
+/** HTML renderizado con navegador real: para webs que bloquean fetch (403/anti-bot). */
+export async function paginaRenderizada(url) {
+  const b = await lanzar();
+  try {
+    const page = await b.newPage();
+    const t0 = Date.now();
+    const r = await page.goto(url, { waitUntil: "networkidle", timeout: 40000 });
+    return { ok: !!r && r.status() < 400, status: r?.status() ?? 0, html: await page.content(), ms: Date.now() - t0 };
+  } catch (e) {
+    return { ok: false, status: 0, html: "", ms: 0, error: e.message };
+  } finally {
+    await b.close();
+  }
+}
+
 /** Abre la web real y extrae identidad: logo, colores, fuentes, fotos, textos de servicios. Devuelve también captura. */
 export async function extraerMarca(url, shotPath) {
-  const browser = await chromium.launch();
+  const browser = await lanzar();
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await page.goto(url, { waitUntil: "networkidle", timeout: 40000 }).catch(() => {});
     await page.waitForTimeout(1500);
     if (shotPath) await page.screenshot({ path: shotPath }).catch(() => {});
     const d = await page.evaluate(() => {
-      const abs = (u) => { try { return new URL(u, location.href).href; } catch { return null; } };
+      const abs = (u) => { if (!u) return null; try { return new URL(u, location.href).href; } catch { return null; } };
       const css = (el, p) => getComputedStyle(el)[p];
       const rgb = (s) => (s.match(/\d+(\.\d+)?/g) || []).slice(0, 3).map(Number);
       const hex = (a) => "#" + a.map((n) => Math.round(n).toString(16).padStart(2, "0")).join("");
@@ -37,6 +54,11 @@ export async function extraerMarca(url, shotPath) {
         .map((i) => abs(i.currentSrc || i.src)).filter(Boolean);
       const og = abs(document.querySelector('meta[property="og:image"]')?.content);
       if (og) fotos.unshift(og);
+      const bgc = rgb(css(document.body, 'backgroundColor') === 'rgba(0, 0, 0, 0)' ? css(document.documentElement, 'backgroundColor') : css(document.body, 'backgroundColor'));
+      const bgLum = bgc.length >= 3 && !/rgba\(0, 0, 0, 0\)/.test(css(document.documentElement, 'backgroundColor') + css(document.body, 'backgroundColor')) ? (0.299 * bgc[0] + 0.587 * bgc[1] + 0.114 * bgc[2]) / 255 : 1;
+      const btn = document.querySelector('a[class*=btn],button,a[class*=button]');
+      const radio = btn ? Math.min(40, parseFloat(css(btn, 'borderRadius')) || 0) : null;
+      const mayus = css(document.querySelector('h1,h2') || document.body, 'textTransform') === 'uppercase';
       const body = css(document.body, "fontFamily");
       const head = css(document.querySelector("h1,h2") || document.body, "fontFamily");
       const textos = [...document.querySelectorAll("h1,h2,h3,li,p")].map((e) => e.innerText.trim()).filter((t) => t.length > 8 && t.length < 160).slice(0, 80);
@@ -49,6 +71,9 @@ export async function extraerMarca(url, shotPath) {
         fuenteTitulo: head.split(",")[0].replace(/["']/g, "").trim(),
         fuenteCuerpo: body.split(",")[0].replace(/["']/g, "").trim(),
         textos,
+        oscuro: bgLum < 0.35,
+        radio,
+        mayus,
       };
     });
     return d;
