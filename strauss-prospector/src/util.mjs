@@ -1,6 +1,15 @@
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export const slug = (s) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+export function uniqueSlugs(names) {
+  const counts = new Map();
+  return names.map((name) => {
+    const base = slug(name) || "negocio";
+    const count = (counts.get(base) || 0) + 1;
+    counts.set(base, count);
+    return count === 1 ? base : `${base}-${count}`;
+  });
+}
 export const esc = (s = "") => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 export async function fetchText(url, ms = 20000) {
   const t0 = Date.now();
@@ -16,3 +25,4 @@ export async function fetchText(url, ms = 20000) {
     clearTimeout(timer);
   }
 }
+

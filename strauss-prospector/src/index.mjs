@@ -5,7 +5,7 @@ import { auditar, PROBLEMAS } from "./audit.mjs";
 import { extraerMarca } from "./brand.mjs";
 import { generarTextos, renderDemo } from "./demo.mjs";
 import { redactarEmail } from "./email.mjs";
-import { slug, esc } from "./util.mjs";
+import { slug, esc, uniqueSlugs } from "./util.mjs";
 
 const env = (k, d) => process.env[k] || d;
 const SECTOR = env("SECTOR", "clínicas estéticas");
@@ -34,11 +34,11 @@ for (const n of buenos) {
   res.push({ ...n, audit: a });
 }
 res.sort((x, y) => y.audit.pts - x.audit.pts);
+for (const [i, id] of uniqueSlugs(res.map((r) => r.nombre)).entries()) res[i].id = id;
 
 console.log(`\n▶ Construyendo hasta ${DEMOS} demos…`);
 let hechas = 0;
 for (const r of res) {
-  r.id = slug(r.nombre);
   if (hechas < DEMOS && r.web && r.audit.pts >= MIN_PTS && !r.audit.flags.includes("web_caida")) {
     try {
       process.stdout.write(`  · ${r.nombre}: marca… `);
@@ -63,10 +63,12 @@ if (PUBLICAR && hechas) {
   execSync(`npx --yes wrangler@4 pages deploy "${dir}/demos" --project-name ${PROYECTO} --branch main --commit-dirty=true`, { stdio: "inherit" });
 }
 
+let emails = 0;
 for (const r of res.filter((x) => x.audit.flags.length && x.audit.pts >= MIN_PTS)) {
-  const url = r.demo ? `${BASE_URL || `https://${PROYECTO}.pages.dev`}/${r.id}/` : "";
+  const url = r.demo && PUBLICAR ? `${BASE_URL || `https://${PROYECTO}.pages.dev`}/${r.id}/` : "";
   r.email = redactarEmail(r, r.audit, url);
   await writeFile(`${dir}/emails/${r.id}.txt`, r.email);
+  emails++;
 }
 
 const filas = res
@@ -80,4 +82,4 @@ await writeFile(
   `${dir}/panel.html`,
   `<!doctype html><meta charset=utf-8><title>Panel</title><style>body{font:14px system-ui;margin:2rem}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #ddd;padding:8px;vertical-align:top;text-align:left}span{background:#eef;padding:2px 6px;border-radius:6px;margin:2px;display:inline-block}pre{white-space:pre-wrap;max-width:60ch}</style><h1>${esc(SECTOR)} · ${esc(ZONA)}</h1><table><tr><th>Negocio<th>Pts<th>Problemas<th>Demo<th>Email</tr>${filas}</table>`,
 );
-console.log(`\n✔ Listo: ${dir}/panel.html · ${hechas} demos · ${res.length} emails`);
+console.log(`\n✔ Listo: ${dir}/panel.html · ${hechas} demos · ${emails} emails`);

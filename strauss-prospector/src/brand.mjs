@@ -8,7 +8,7 @@ export async function paginaRenderizada(url) {
   try {
     const page = await b.newPage();
     const t0 = Date.now();
-    const r = await page.goto(url, { waitUntil: "networkidle", timeout: 40000 });
+    const r = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
     return { ok: !!r && r.status() < 400, status: r?.status() ?? 0, html: await page.content(), ms: Date.now() - t0 };
   } catch (e) {
     return { ok: false, status: 0, html: "", ms: 0, error: e.message };
@@ -22,7 +22,7 @@ export async function extraerMarca(url, shotPath) {
   const browser = await lanzar();
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-    await page.goto(url, { waitUntil: "networkidle", timeout: 40000 }).catch(() => {});
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 }).catch(() => {});
     await page.waitForTimeout(1500);
     if (shotPath) await page.screenshot({ path: shotPath }).catch(() => {});
     const d = await page.evaluate(() => {
@@ -54,8 +54,11 @@ export async function extraerMarca(url, shotPath) {
         .map((i) => abs(i.currentSrc || i.src)).filter(Boolean);
       const og = abs(document.querySelector('meta[property="og:image"]')?.content);
       if (og) fotos.unshift(og);
-      const bgc = rgb(css(document.body, 'backgroundColor') === 'rgba(0, 0, 0, 0)' ? css(document.documentElement, 'backgroundColor') : css(document.body, 'backgroundColor'));
-      const bgLum = bgc.length >= 3 && !/rgba\(0, 0, 0, 0\)/.test(css(document.documentElement, 'backgroundColor') + css(document.body, 'backgroundColor')) ? (0.299 * bgc[0] + 0.587 * bgc[1] + 0.114 * bgc[2]) / 255 : 1;
+      const bodyBg = css(document.body, 'backgroundColor');
+      const isTransparent = (value) => value === 'transparent' || /rgba\([^)]*,\s*0(?:\.0+)?\s*\)$/.test(value);
+      const selectedBg = isTransparent(bodyBg) ? css(document.documentElement, 'backgroundColor') : bodyBg;
+      const bgc = rgb(selectedBg);
+      const bgLum = bgc.length >= 3 && !isTransparent(selectedBg) ? (0.299 * bgc[0] + 0.587 * bgc[1] + 0.114 * bgc[2]) / 255 : 1;
       const btn = document.querySelector('a[class*=btn],button,a[class*=button]');
       const radio = btn ? Math.min(40, parseFloat(css(btn, 'borderRadius')) || 0) : null;
       const mayus = css(document.querySelector('h1,h2') || document.body, 'textTransform') === 'uppercase';
