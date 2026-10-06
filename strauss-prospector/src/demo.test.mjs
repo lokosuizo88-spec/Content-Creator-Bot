@@ -31,4 +31,6 @@ test('composición: layouts mantienen fallback de animación y hover tras reveal
 
 test('identificadores: nombres equivalentes se distinguen al generar un lote', () => {
   assert.deepEqual(uniqueSlugs(['Clínica Á','Clinica A','!!!']),['clinica-a','clinica-a-2','negocio']);
+  assert.deepEqual(uniqueSlugs(['Clinica','Clinica 2','Clínica']),['clinica','clinica-2','clinica-3']);
+  assert.deepEqual(uniqueSlugs(['Clinica','Clínica','Clinica 2']),['clinica','clinica-2','clinica-2-2']);
 });

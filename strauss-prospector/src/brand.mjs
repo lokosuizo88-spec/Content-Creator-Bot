@@ -9,6 +9,7 @@ export async function paginaRenderizada(url) {
     const page = await b.newPage();
     const t0 = Date.now();
     const r = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
+    await page.waitForTimeout(1500);
     return { ok: !!r && r.status() < 400, status: r?.status() ?? 0, html: await page.content(), ms: Date.now() - t0 };
   } catch (e) {
     return { ok: false, status: 0, html: "", ms: 0, error: e.message };

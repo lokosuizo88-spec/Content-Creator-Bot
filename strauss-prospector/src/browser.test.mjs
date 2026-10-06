@@ -18,7 +18,7 @@ test('navegación: extrae una web oscura y no espera a network-idle', {skip:!has
   const server=createServer((req,res)=>{
     if(req.url==='/poll') return;
     res.writeHead(200,{'content-type':'text/html; charset=utf-8'});
-    res.end(`<!doctype html><html style="background-color:rgba(0,0,0,0)"><head><title>Web de prueba</title></head><body style="background-color:rgb(18,18,18);font-family:Inter"><h1>Centro de prueba</h1><p>Información real suficiente</p><script>setInterval(()=>fetch('/poll').catch(()=>{}),30)</script></body></html>`);
+    res.end(`<!doctype html><html style="background-color:rgba(0,0,0,0)"><head><title>Web de prueba</title></head><body style="background-color:rgb(18,18,18);font-family:Inter"><h1>Centro de prueba</h1><p>Información real suficiente</p><script>setInterval(()=>fetch('/poll').catch(()=>{}),30);setTimeout(()=>document.body.insertAdjacentHTML('beforeend','<p>Reserva cargada tras iniciar la web</p>'),250)</script></body></html>`);
   });
   server.listen(0,'127.0.0.1'); await once(server,'listening');
   t.after(()=>{server.closeAllConnections();server.close();});
@@ -26,6 +26,7 @@ test('navegación: extrae una web oscura y no espera a network-idle', {skip:!has
   const rendered=await paginaRenderizada(url);
   assert.equal(rendered.ok,true);
   assert.match(rendered.html,/Centro de prueba/);
+  assert.match(rendered.html,/Reserva cargada tras iniciar la web/);
   const brand=await extraerMarca(url);
   assert.equal(brand.oscuro,true);
   assert.equal(brand.titulo,'Web de prueba');
