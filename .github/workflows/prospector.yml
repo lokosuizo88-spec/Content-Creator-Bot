@@ -1,5 +1,7 @@
 name: Strauss Prospector
 on:
+  pull_request:
+    branches: [main]
   workflow_dispatch:
     inputs:
       sector: { description: Sector, default: clínicas estéticas }
@@ -11,7 +13,19 @@ on:
     - cron: "0 7 * * 1" # lunes 07:00 UTC con valores por defecto
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: strauss-prospector } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
   run:
+    needs: test
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     defaults: { run: { working-directory: strauss-prospector } }

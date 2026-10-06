@@ -8,7 +8,7 @@ function lum(hex) { const n = parseInt(hex.slice(1), 16); return (0.299 * (n >> 
 
 /** Textos reales con IA a partir de lo extraído de su web. Lanza si Gemini falla (no se genera demo con relleno). */
 export async function generarTextos(neg, marca) {
-  return gemini(
+  const textos = await gemini(
     `Eres copywriter para un negocio local. Reescribe la web de "${neg.nombre}" (${neg.direccion}) usando SOLO la información real de abajo; no inventes tratamientos, precios ni premios.
 Devuelve JSON: {"eslogan":"max 8 palabras","hero":"1-2 frases","cta":"texto botón reserva","servicios":[{"titulo":"","texto":"1 frase"}] (4-6),"por_que":[{"titulo":"","texto":"1 frase"}] (3),"sobre":"2-3 frases","en":{"eslogan":"","hero":"","cta":""}}
 Título web: ${marca.titulo}
@@ -17,6 +17,21 @@ Textos de su web:
 ${marca.textos.join("\n")}`,
     { json: true },
   );
+  return validarTextos(textos);
+}
+
+export function validarTextos(textos) {
+  const required = ["eslogan", "hero", "cta", "sobre"];
+  if (!textos || required.some((key) => typeof textos[key] !== "string" || !textos[key].trim()) ||
+      !Array.isArray(textos.servicios) || !textos.servicios.length || !Array.isArray(textos.por_que)) {
+    throw new Error("Gemini devolvió un JSON incompleto para la demo");
+  }
+  for (const [key, rows] of [["servicios", textos.servicios], ["por_que", textos.por_que]]) {
+    if (rows.some((row) => !row || typeof row.titulo !== "string" || typeof row.texto !== "string")) {
+      throw new Error(`Gemini devolvió ${key} con elementos incompletos`);
+    }
+  }
+  return textos;
 }
 
 // ── Motor de composición: cada demo elige su propia estructura ─────────────────
@@ -74,10 +89,11 @@ const R = {
     return `<section class="s"><div class="gal ${v}">${f.slice(0, v === "mosaico" ? 5 : 4).map(im).join("")}</div></section>`;
   },
   cta: (v, c) => {
+    const action = c.neg.telefono ? `<a class="btn alt" href="tel:${esc(c.neg.telefono.replace(/\s/g, ""))}">Llamar para pedir cita</a>` : `<p class="pending">Enlace de reserva pendiente de configurar</p>`;
     const tel = c.neg.telefono ? `<a class="tel" href="tel:${esc(c.neg.telefono.replace(/\s/g, ""))}">${esc(c.neg.telefono)}</a>` : "";
-    if (v === "dividido") return `<section class="s cta dividido" id="cita"><div><h2>${esc(c.t.cta)}</h2><p>${esc(c.neg.direccion || "")}</p></div><div><a class="btn alt" href="#">Reservar cita online</a>${tel}</div></section>`;
-    if (v === "minimo") return `<section class="s cta minimo" id="cita"><h2>${esc(c.t.cta)}</h2>${tel}<a class="btn" href="#">Reservar cita online</a></section>`;
-    return `<section class="s cta" id="cita"><h2>${esc(c.t.cta)}</h2><a class="btn alt" href="#">Reservar cita online</a>${tel}</section>`;
+    if (v === "dividido") return `<section class="s cta dividido" id="cita"><div><h2>${esc(c.t.cta)}</h2><p>${esc(c.neg.direccion || "")}</p></div><div>${action}${tel}</div></section>`;
+    if (v === "minimo") return `<section class="s cta minimo" id="cita"><h2>${esc(c.t.cta)}</h2>${action}${tel}</section>`;
+    return `<section class="s cta" id="cita"><h2>${esc(c.t.cta)}</h2>${action}${tel}</section>`;
   },
 };
 
@@ -132,7 +148,7 @@ section.s{padding:84px 5vw}h2{font-size:clamp(1.8rem,3.5vw,2.6rem);margin-bottom
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px}
 .card,.bx{padding:28px;border:1px solid var(--line);border-radius:var(--r);background:var(--card);transition:transform 200ms var(--ease),box-shadow 200ms var(--ease)}
 .n{color:var(--c2);font-weight:700}.card h3,.bx h3{margin:8px 0}p{color:var(--mut)}
-.lista{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:8px 56px}.lista li{display:flex;gap:20px;padding:22px 0;border-top:1px solid var(--line)}.lista .n{font-family:var(--fh);font-size:2.2rem;line-height:1}
+.lista{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:8px 56px}.lista li{display:flex;gap:20px;padding:22px 0;border-top:1px solid var(--line)}.lista .n{font-family:var(--fh);font-size:2.2rem;line-height:1}
 .filas{display:grid;gap:48px}.fila{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}.fila.inv .ph{order:2}.fila .ph{min-height:260px;border-radius:var(--r)}
 .bento{display:grid;grid-template-columns:repeat(6,1fr);gap:16px}.bx.b0{grid-column:span 3;background:var(--c1);color:var(--on)}.bx.b0 p{color:inherit;opacity:.85}.bx.b1{grid-column:span 3}.bx.b2,.bx.b3,.bx.b4{grid-column:span 2}
 .alt{background:var(--alt)}.dos{display:grid;grid-template-columns:1fr 1.2fr;gap:56px;align-items:center}.ph.tall{min-height:440px;border-radius:var(--r)}
@@ -143,7 +159,7 @@ section.s{padding:84px 5vw}h2{font-size:clamp(1.8rem,3.5vw,2.6rem);margin-bottom
 .cta{background:var(--c1);color:var(--on);text-align:center}.cta .btn{background:#fff;color:var(--c1)}.cta p{color:inherit;opacity:.85}.tel{color:inherit;display:block;margin-top:18px;font-size:1.4rem}
 .cta.dividido{display:grid;grid-template-columns:1fr auto;gap:40px;align-items:center;text-align:left}.cta.dividido h2{margin:0 0 8px}.cta.minimo{background:var(--bg);color:var(--fg);border-top:1px solid var(--line)}.cta.minimo .btn{background:var(--c1);color:var(--on);margin-top:20px}
 footer{padding:24px 5vw;font-size:.85rem;color:var(--mut);text-align:center}
-@media(hover:hover) and (pointer:fine){.card:hover,.bx:hover{transform:translateY(-4px);box-shadow:0 14px 34px #0002}.btn:hover{box-shadow:0 8px 24px #0003}.nav a:hover{color:var(--c1)}}
+@media(hover:hover) and (pointer:fine){.card:hover,.bx:hover,.js .rv.in.card:hover,.js .rv.in.bx:hover{transform:translateY(-4px);box-shadow:0 14px 34px #0002}.btn:hover{box-shadow:0 8px 24px #0003}.nav a:hover{color:var(--c1)}}
 .js .rv{opacity:0;transform:translateY(12px);transition:opacity 450ms var(--ease),transform 450ms var(--ease);transition-delay:calc(var(--i,0)*60ms)}.js .rv.in{opacity:1;transform:none}
 @media(prefers-reduced-motion:reduce){.js .rv{transform:none;transition:opacity 200ms}.btn,.card,.bx{transition:none}}
 @media(max-width:800px){.hero.split,.hero.editorial,.dos,.fila,.franja,.cta.dividido{grid-template-columns:1fr}.hero .img{min-height:280px}.hero.split .img,.hero.editorial .img{order:-1}.nav nav{display:none}.fila.inv .ph{order:0}.bento{grid-template-columns:1fr}.bx.b0,.bx.b1,.bx.b2,.bx.b3,.bx.b4{grid-column:auto}.gal.mosaico{grid-template-columns:1fr 1fr}.cta.dividido{text-align:center}}`;
@@ -153,6 +169,7 @@ ${R.nav(cfg.nav, c)}
 ${R.hero(cfg.hero, c)}
 ${cuerpo}
 <footer>Propuesta de rediseño preparada por Strauss Digital · Maqueta no oficial basada en la identidad pública de ${esc(neg.nombre)}</footer>
-<script>document.documentElement.classList.add('js');var io=new IntersectionObserver(function(e){e.forEach(function(x){if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target)}})},{rootMargin:'0px 0px -60px'});document.querySelectorAll('.rv,section.s h2').forEach(function(el){el.classList.add('rv');io.observe(el)})</script>
+<script>document.documentElement.classList.add('js');var nodes=document.querySelectorAll('.rv,section.s h2');if('IntersectionObserver'in window){var io=new IntersectionObserver(function(e){e.forEach(function(x){if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target)}})},{rootMargin:'0px 0px -60px'});nodes.forEach(function(el){el.classList.add('rv');io.observe(el)})}else{nodes.forEach(function(el){el.classList.add('in')})}</script>
 </body></html>`;
 }
+
