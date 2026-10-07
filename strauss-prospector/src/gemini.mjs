@@ -1,7 +1,7 @@
 import { sleep } from "./util.mjs";
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-const GAP_MS = Number(process.env.GEMINI_GAP_MS || 13000); // free tier: 5 req/min
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+const GAP_MS = Number(process.env.GEMINI_GAP_MS || 13000);
 let last = 0;
 
 /** Llama a Gemini con pausa entre llamadas y reintentos con backoff (503/429). Lanza error si agota reintentos. */
@@ -12,12 +12,12 @@ export async function gemini(prompt, { json = false, retries = 6 } = {}) {
     const wait = last + GAP_MS - Date.now();
     if (wait > 0) await sleep(wait);
     last = Date.now();
-    const r = await fetch(`${process.env.GEMINI_URL || "https://generativelanguage.googleapis.com"}/v1beta/models/${MODEL}:generateContent?key=${key}`, {
+    const r = await fetch(`${process.env.GEMINI_URL || "https://generativelanguage.googleapis.com"}/v1beta/models/${MODEL}:generateContent`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "x-goog-api-key": key },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: json ? { responseMimeType: "application/json", temperature: 0.7 } : { temperature: 0.7 },
+        ...(json ? { generationConfig: { responseMimeType: "application/json" } } : {}),
       }),
     });
     if (r.ok) {
