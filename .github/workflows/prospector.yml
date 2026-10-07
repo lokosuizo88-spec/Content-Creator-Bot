@@ -70,7 +70,12 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Comprobar demos generadas en escritorio y móvil
+        run: node --test src/output.test.mjs
+        env:
+          DEMOS: ${{ inputs.demos || '3' }}
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: salida
           path: strauss-prospector/salida
