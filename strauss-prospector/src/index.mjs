@@ -83,3 +83,6 @@ await writeFile(
   `<!doctype html><meta charset=utf-8><title>Panel</title><style>body{font:14px system-ui;margin:2rem}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #ddd;padding:8px;vertical-align:top;text-align:left}span{background:#eef;padding:2px 6px;border-radius:6px;margin:2px;display:inline-block}pre{white-space:pre-wrap;max-width:60ch}</style><h1>${esc(SECTOR)} · ${esc(ZONA)}</h1><table><tr><th>Negocio<th>Pts<th>Problemas<th>Demo<th>Email</tr>${filas}</table>`,
 );
 console.log(`\n✔ Listo: ${dir}/panel.html · ${hechas} demos · ${emails} emails`);
+if (DEMOS > 0 && hechas === 0 && res.some((r) => r.web && r.audit.pts >= MIN_PTS && !r.audit.flags.includes("web_caida"))) {
+  throw new Error("No se pudo generar ninguna demo de negocios aptos; revisa los errores anteriores");
+}
