@@ -55,7 +55,11 @@ test('Gemini: si el modelo principal sigue saturado (503) pasa al de respaldo', 
 });
 
 test('Gemini: reintenta errores de red y peticiones colgadas', async () => {
-  const colgada = (options) => new Promise((_, reject) => options.signal.addEventListener('abort', () => reject(options.signal.reason)));
+  // Un socket real mantiene vivo el proceso; el temporizador de AbortSignal.timeout no, así que lo simulamos.
+  const colgada = (options) => new Promise((_, reject) => {
+    const vivo = setInterval(() => {}, 1000);
+    options.signal.addEventListener('abort', () => { clearInterval(vivo); reject(options.signal.reason); });
+  });
   const pedidos = await conFetch([() => { throw new TypeError('fetch failed'); }, colgada, ok('hola')], async () => {
     assert.equal(await gemini('prueba'), 'hola');
   }, { GEMINI_TIMEOUT_MS: '50' });
