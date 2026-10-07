@@ -68,12 +68,17 @@ jobs:
           PUBLICAR: ${{ inputs.publicar || 'n' }}
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - name: Comprobar demos generadas en escritorio y móvil
         run: node --test src/output.test.mjs
         env:
           DEMOS: ${{ inputs.demos || '3' }}
+      # Solo se ejecuta si la comprobación anterior pasa; publicar.mjs no hace nada si PUBLICAR no es s/si/true/1.
+      - name: Publicar demos en Cloudflare Pages
+        run: node src/publicar.mjs
+        env:
+          PUBLICAR: ${{ inputs.publicar || 'n' }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -1,5 +1,4 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { execSync } from "node:child_process";
 import { buscar } from "./places.mjs";
 import { auditar, PROBLEMAS } from "./audit.mjs";
 import { extraerMarca } from "./brand.mjs";
@@ -59,11 +58,7 @@ for (const r of res) {
 }
 await writeFile(`${dir}/demos/_headers`, "/*\n  X-Robots-Tag: noindex\n");
 
-if (PUBLICAR && hechas) {
-  console.log(`\n▶ Publicando en Cloudflare Pages (${PROYECTO})…`);
-  execSync(`npx --yes wrangler@4 pages deploy "${dir}/demos" --project-name ${PROYECTO} --branch main --commit-dirty=true`, { stdio: "inherit" });
-}
-
+// La publicación va aparte (src/publicar.mjs), después de comprobar las demos con src/output.test.mjs.
 let emails = 0;
 for (const r of res.filter((x) => x.audit.flags.length && x.audit.pts >= MIN_PTS)) {
   const url = r.demo && PUBLICAR ? `${BASE_URL || `https://${PROYECTO}.pages.dev`}/${r.id}/` : "";
@@ -84,6 +79,7 @@ await writeFile(
   `<!doctype html><meta charset=utf-8><title>Panel</title><style>body{font:14px system-ui;margin:2rem}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #ddd;padding:8px;vertical-align:top;text-align:left}span{background:#eef;padding:2px 6px;border-radius:6px;margin:2px;display:inline-block}pre{white-space:pre-wrap;max-width:60ch}</style><h1>${esc(SECTOR)} · ${esc(ZONA)}</h1><table><tr><th>Negocio<th>Pts<th>Problemas<th>Demo<th>Email</tr>${filas}</table>`,
 );
 console.log(`\n✔ Listo: ${dir}/panel.html · ${hechas} demos · ${emails} emails`);
+if (PUBLICAR && hechas) console.log("  Publicación pendiente: node --test src/output.test.mjs && node src/publicar.mjs");
 if (DEMOS > 0 && hechas === 0 && res.some((r) => r.web && r.audit.pts >= MIN_PTS && !r.audit.flags.includes("web_caida"))) {
   throw new Error("No se pudo generar ninguna demo de negocios aptos; revisa los errores anteriores");
 }
