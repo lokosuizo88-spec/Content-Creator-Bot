@@ -56,10 +56,22 @@ if (demos.length) {
           const page = await ctx.newPage();
           const errores = [];
           page.on('pageerror', (e) => errores.push(e.message));
+          const imagenesRotas = [];
+          page.on('requestfailed', (r) => r.resourceType() === 'image' && imagenesRotas.push(`${r.url()} (${r.failure()?.errorText})`));
+          page.on('response', (r) => r.request().resourceType() === 'image' && r.status() >= 400 && imagenesRotas.push(`${r.url()} (${r.status()})`));
           try {
             const resp = await page.goto(base + demo.ruta, { waitUntil: 'load', timeout: 30_000 });
             assert.equal(resp?.status(), 200, 'la demo no carga');
-            await page.waitForTimeout(500);
+            // Recorre la página para disparar las animaciones de aparición (IntersectionObserver) y la carga diferida de imágenes.
+            await page.evaluate(async () => {
+              for (let y = 0; y < document.documentElement.scrollHeight; y += Math.round(innerHeight / 2)) {
+                scrollTo(0, y);
+                await new Promise((r) => setTimeout(r, 100));
+              }
+              scrollTo(0, 0);
+            });
+            await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {});
+            await page.waitForTimeout(800);
 
             const info = await page.evaluate(() => {
               const de = document.documentElement;
@@ -88,6 +100,7 @@ if (demos.length) {
             assert.ok(info.h1, 'falta un <h1> con texto');
             assert.ok(info.largo > 200, `contenido insuficiente (${info.largo} caracteres)`);
             assert.deepEqual(errores, [], 'errores JavaScript en la página');
+            assert.deepEqual(imagenesRotas, [], 'imágenes que no cargan');
             assert.ok(info.scroll <= info.ancho, `desbordamiento horizontal: scrollWidth ${info.scroll} > ${info.ancho}`);
             assert.deepEqual(info.anclasRotas, [], 'enlaces internos (#ancla) sin destino');
             for (const ruta of new Set(info.relativos)) {

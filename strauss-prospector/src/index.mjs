@@ -5,7 +5,7 @@ import { auditar, PROBLEMAS } from "./audit.mjs";
 import { extraerMarca } from "./brand.mjs";
 import { generarTextos, renderDemo } from "./demo.mjs";
 import { redactarEmail } from "./email.mjs";
-import { slug, esc, uniqueSlugs } from "./util.mjs";
+import { slug, esc, uniqueSlugs, guardarImagenes } from "./util.mjs";
 
 const env = (k, d) => process.env[k] || d;
 const SECTOR = env("SECTOR", "clínicas estéticas");
@@ -45,8 +45,9 @@ for (const r of res) {
       const marca = await extraerMarca(r.web, `${dir}/capturas/${r.id}.png`);
       process.stdout.write("textos… ");
       const t = await generarTextos(r, marca);
-      await mkdir(`${dir}/demos/${r.id}`, { recursive: true });
-      await writeFile(`${dir}/demos/${r.id}/index.html`, renderDemo(r, marca, t, hechas));
+      process.stdout.write("imágenes… ");
+      const local = await guardarImagenes(marca, `${dir}/demos/${r.id}`);
+      await writeFile(`${dir}/demos/${r.id}/index.html`, renderDemo(r, local, t, hechas));
       r.demo = true;
       r.marca = marca;
       hechas++;
