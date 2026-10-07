@@ -163,7 +163,7 @@ footer{padding:24px 5vw;font-size:.85rem;color:var(--mut);text-align:center}
 .js .rv{opacity:0;transform:translateY(12px);transition:opacity 450ms var(--ease),transform 450ms var(--ease);transition-delay:calc(var(--i,0)*60ms)}.js .rv.in{opacity:1;transform:none}
 @media(prefers-reduced-motion:reduce){.js .rv{transform:none;transition:opacity 200ms}.btn,.card,.bx{transition:none}}
 @media(max-width:800px){.hero.split,.hero.editorial,.dos,.fila,.franja,.cta.dividido{grid-template-columns:1fr}.hero .img{min-height:280px}.hero.split .img,.hero.editorial .img{order:-1}.nav nav{display:none}.fila.inv .ph{order:0}.bento{grid-template-columns:1fr}.bx.b0,.bx.b1,.bx.b2,.bx.b3,.bx.b4{grid-column:auto}.gal.mosaico{grid-template-columns:1fr 1fr}.cta.dividido{text-align:center}}`;
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(neg.nombre)} — propuesta de web</title>
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>${esc(neg.nombre)} — propuesta de web</title>
 <link href="https://fonts.googleapis.com/css2?${fonts}&display=swap" rel="stylesheet"><style>${css}</style></head><body>
 ${R.nav(cfg.nav, c)}
 ${R.hero(cfg.hero, c)}
