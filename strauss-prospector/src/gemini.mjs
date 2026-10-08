@@ -80,7 +80,9 @@ export async function gemini(prompt, { json = false, retries = 2 } = {}) {
       if (![429, 500, 502, 503, 504].includes(r.status)) throw new Error(`Gemini ${r.status}: ${body.slice(0, 200)}`);
       if (i < retries) {
         const m = body.match(/retry in ([\d.]+)s/i);
-        await sleep(m ? Math.min(60000, Math.ceil(Number(m[1]) * 1000) + 1000) : Math.min(60000, backoff * 2 ** i));
+        const pausa = m ? Math.min(60000, Math.ceil(Number(m[1]) * 1000) + 1000) : Math.min(60000, backoff * 2 ** i);
+        const restante = Math.max(0, fin - Date.now());
+        if (restante > 0) await sleep(Math.min(pausa, restante));
       }
     }
   }
