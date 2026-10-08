@@ -1,0 +1,10 @@
+{
+  "nota": "Demos que ya estaban online en https://main.strauss-demos.pages.dev el 2026-10-08, antes de que existiera indice-demos.json. Solo se usa si la web publicada todavía no tiene índice.",
+  "demos": {
+    "fincas-mallorca-inmobiliaria": { "archivos": ["index.html"] },
+    "palmacasa-inmobiliaria": { "archivos": ["index.html"] },
+    "talaiot-asesores-inmobiliarios": { "archivos": ["index.html"] },
+    "centre-de-estetic-spa-araceli": { "archivos": ["index.html"] },
+    "inmobiliaria-inmogestion-balear": { "archivos": ["index.html"] }
+  }
+}

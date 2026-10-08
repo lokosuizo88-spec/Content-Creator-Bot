@@ -5,6 +5,7 @@ import { extraerMarca } from "./brand.mjs";
 import { generarTextos, renderDemo } from "./demo.mjs";
 import { redactarEmail } from "./email.mjs";
 import { slug, esc, uniqueSlugs, guardarImagenes } from "./util.mjs";
+import { urlBase } from "./publicar.mjs";
 
 const env = (k, d) => process.env[k] || d;
 const SECTOR = env("SECTOR", "clínicas estéticas");
@@ -61,7 +62,7 @@ await writeFile(`${dir}/demos/_headers`, "/*\n  X-Robots-Tag: noindex\n");
 // La publicación va aparte (src/publicar.mjs), después de comprobar las demos con src/output.test.mjs.
 let emails = 0;
 for (const r of res.filter((x) => x.audit.flags.length && x.audit.pts >= MIN_PTS)) {
-  const url = r.demo && PUBLICAR ? `${BASE_URL || `https://${PROYECTO}.pages.dev`}/${r.id}/` : "";
+  const url = r.demo && PUBLICAR ? `${urlBase(PROYECTO, BASE_URL)}/${r.id}/` : "";
   r.email = redactarEmail(r, r.audit, url);
   await writeFile(`${dir}/emails/${r.id}.txt`, r.email);
   emails++;
