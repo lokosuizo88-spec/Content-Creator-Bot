@@ -113,7 +113,9 @@ test('Gemini: el timeout por petición queda limitado al plazo global restante',
   let transcurrido;
   const pedidos = await conFetch([options => new Promise((_, reject) => {
     const inicio = Date.now();
+    const vivo = setInterval(() => {}, 1000);
     options.signal.addEventListener('abort', () => {
+      clearInterval(vivo);
       transcurrido = Date.now() - inicio;
       reject(options.signal.reason);
     }, { once: true });
