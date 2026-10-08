@@ -103,11 +103,13 @@ test("OpenRouter respeta el plazo global aunque la petición se quede esperando"
     });
   };
   const start = Date.now();
+  const keepAlive = setTimeout(() => {}, 200);
   try {
     await assert.rejects(openrouter("prueba", { retries: 2, deadline: Date.now() + 40 }), /plazo agotado|sin respuesta/);
     assert.equal(calls, 1);
     assert.ok(Date.now() - start < 500, "se superó ampliamente el plazo global");
   } finally {
+    clearTimeout(keepAlive);
     globalThis.fetch = previous.fetch;
     for (const key of Object.keys(process.env)) if (!(key in previous.env)) delete process.env[key];
     Object.assign(process.env, previous.env);
