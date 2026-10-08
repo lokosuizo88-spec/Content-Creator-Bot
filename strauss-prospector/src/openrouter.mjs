@@ -25,9 +25,12 @@ export async function openrouter(prompt, { json = false, retries = 2, deadline }
   const fallos = [];
 
   for (let i = 0; i <= retries; i++) {
-    if (Date.now() > fin) break;
+    if (Date.now() >= fin) break;
     const wait = last + gap - Date.now();
-    if (wait > 0) await sleep(wait);
+    if (wait > 0) await sleep(Math.min(wait, Math.max(0, fin - Date.now())));
+    const restante = fin - Date.now();
+    if (restante <= 0) break;
+    const timeoutPeticion = Math.min(timeout, restante);
     last = Date.now();
     let r;
     try {
@@ -44,11 +47,11 @@ export async function openrouter(prompt, { json = false, retries = 2, deadline }
           messages: [{ role: "user", content: prompt }],
           ...(json ? { response_format: { type: "json_object" } } : {}),
         }),
-        signal: AbortSignal.timeout(timeout),
+        signal: AbortSignal.timeout(timeoutPeticion),
       });
     } catch (e) {
-      fallos.push(e.name === "TimeoutError" ? `sin respuesta en ${timeout / 1000}s` : e.message);
-      if (i < retries) await sleep(Math.min(60000, backoff * 2 ** i));
+      fallos.push(e.name === "TimeoutError" ? `sin respuesta en ${timeoutPeticion / 1000}s` : e.message);
+      if (i < retries) await sleep(Math.min(60000, backoff * 2 ** i, Math.max(0, fin - Date.now())));
       continue;
     }
     if (r.ok) {
@@ -60,7 +63,7 @@ export async function openrouter(prompt, { json = false, retries = 2, deadline }
     if (r.status === 401 || r.status === 403) throw new Error(`OpenRouter ${r.status}: ${body.slice(0, 200)}`);
     fallos.push(String(r.status));
     if (![408, 429, 500, 502, 503, 504].includes(r.status)) throw new Error(`OpenRouter ${r.status}: ${body.slice(0, 200)}`);
-    if (i < retries) await sleep(Math.min(60000, backoff * 2 ** i));
+    if (i < retries) await sleep(Math.min(60000, backoff * 2 ** i, Math.max(0, fin - Date.now())));
   }
   throw new Error(`OpenRouter no disponible con ${model} (${fallos.join("; ") || "plazo agotado"})`);
 }
