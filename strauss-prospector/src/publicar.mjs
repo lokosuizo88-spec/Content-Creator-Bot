@@ -14,6 +14,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const INDICE = "indice-demos.json";
 const INICIAL = fileURLToPath(new URL("../demos-publicadas-inicial.json", import.meta.url));
+const idSeguro = (id) => /^[a-z0-9][a-z0-9-]*$/.test(id);
+const archivoSeguro = (f) => typeof f === "string" && !!f && !f.includes("\\") && !f.startsWith("/") && f.split("/").every((p) => p && p !== "." && p !== "..");
 
 export const quierePublicar = (v = "n") => /^(s|si|true|1)$/i.test(v);
 export const urlBase = (proyecto = "strauss-demos", base = process.env.DEMOS_BASE_URL) => (base || `https://main.${proyecto}.pages.dev`).replace(/\/+$/, "");
@@ -54,26 +56,27 @@ async function leerPublicado(base, descargar) {
   }
   if (!r.ok) throw new Error(`No se puede leer ${base}/${INDICE} (HTTP ${r.status}). No se publica para no romper enlaces.`);
   const indice = await r.json();
-  if (!indice || typeof indice.demos !== "object") throw new Error(`${INDICE} publicado no es válido. No se publica.`);
+  if (!indice || !indice.demos || typeof indice.demos !== "object" || Array.isArray(indice.demos)) throw new Error(`${INDICE} publicado no es válido. No se publica.`);
   return indice;
 }
 
 /**
  * Prepara la carpeta a desplegar: lo ya publicado + las demos nuevas de `dir` (las nuevas sustituyen
- * a las publicadas con el mismo id). Devuelve { carpeta, indice, nuevas, conservadas, perdidas }.
+ * a las publicadas con el mismo id). Si falta algún archivo anterior, detiene el despliegue.
  */
 export async function prepararDespliegue({ dir, base, descargar = fetch, ahora = new Date() }) {
   const nuevas = demosEn(dir);
+  if (!nuevas.every(idSeguro)) throw new Error("Nombre de demo no válido. No se publica.");
   const publicado = await leerPublicado(base, descargar);
   const carpeta = mkdtempSync(join(tmpdir(), "demos-"));
   const indice = { actualizado: ahora.toISOString(), demos: {} };
   const conservadas = [];
-  const perdidas = [];
-
+  try {
   for (const [id, info] of Object.entries(publicado.demos)) {
+    if (!idSeguro(id) || !info || typeof info !== "object") throw new Error(`Entrada insegura en ${INDICE}: ${id}. No se publica.`);
     if (nuevas.includes(id)) continue;
     const ficheros = info.archivos?.length ? info.archivos : ["index.html"];
-    let falta = false;
+    if (!Array.isArray(ficheros) || !ficheros.includes("index.html") || !ficheros.every(archivoSeguro)) throw new Error(`Archivos no válidos para ${id}. No se publica.`);
     for (const f of ficheros) {
       let r;
       try {
@@ -81,16 +84,11 @@ export async function prepararDespliegue({ dir, base, descargar = fetch, ahora =
       } catch (e) {
         throw new Error(`No se pudo descargar ${id}/${f} (${e.message}). No se publica para no romper enlaces.`);
       }
-      if (r.status === 404) { falta = true; break; }
+      if (r.status === 404) throw new Error(`Falta ${id}/${f} en la web publicada. No se publica para no borrar la demo anterior.`);
       if (!r.ok) throw new Error(`No se pudo descargar ${id}/${f} (HTTP ${r.status}). No se publica para no romper enlaces.`);
       const destino = join(carpeta, id, ...f.split("/"));
       mkdirSync(dirname(destino), { recursive: true });
       writeFileSync(destino, Buffer.from(await r.arrayBuffer()));
-    }
-    if (falta) {
-      perdidas.push(id);
-      rmSync(join(carpeta, id), { recursive: true, force: true });
-      continue;
     }
     indice.demos[id] = { ...info, archivos: ficheros };
     conservadas.push(id);
@@ -107,7 +105,11 @@ export async function prepararDespliegue({ dir, base, descargar = fetch, ahora =
   writeFileSync(join(carpeta, INDICE), JSON.stringify(indice, null, 2));
   writeFileSync(join(carpeta, "_headers"), "/*\n  X-Robots-Tag: noindex, nofollow\n");
   writeFileSync(join(carpeta, "robots.txt"), "User-agent: *\nDisallow: /\n");
-  return { carpeta, indice, nuevas, conservadas, perdidas };
+  return { carpeta, indice, nuevas, conservadas };
+  } catch (e) {
+    rmSync(carpeta, { recursive: true, force: true });
+    throw e;
+  }
 }
 
 /** Comprueba tras desplegar que todas las demos del índice responden. Devuelve los ids que no. */
@@ -125,17 +127,15 @@ export async function publicar({ dir, proyecto = "strauss-demos", base = urlBase
   if (!dir || !existsSync(dir)) throw new Error(`No existe la carpeta de demos: ${dir}`);
   if (!demosEn(dir).length) {
     console.log(`Nada que publicar en ${dir}`);
-    return { nuevas: [], conservadas: [], perdidas: [] };
+    return { nuevas: [], conservadas: [] };
   }
   const p = await prepararDespliegue({ dir, base, descargar });
   try {
     console.log(`▶ Publicando en Cloudflare Pages (${proyecto}): ${p.nuevas.length} nuevas + ${p.conservadas.length} ya publicadas que se conservan…`);
-    if (p.perdidas.length) console.log(`  Aviso: figuraban en el índice pero ya no estaban online, no se pueden conservar: ${p.perdidas.join(", ")}`);
-    const npx = process.platform === "win32" ? "npx.cmd" : "npx";
-    ejecutar(npx, ["--yes", "wrangler@4", "pages", "deploy", p.carpeta, "--project-name", proyecto, "--branch", "main", "--commit-dirty=true"], {
-      stdio: "inherit",
-      shell: process.platform === "win32",
-    });
+    const npxCli = join(dirname(process.execPath), "node_modules", "npm", "bin", "npx-cli.js");
+    if (process.platform === "win32" && !existsSync(npxCli)) throw new Error("No encuentro npx en esta instalación de Node.js; no se publica.");
+    const args = ["--yes", "wrangler@4", "pages", "deploy", p.carpeta, "--project-name", proyecto, "--branch", "main", "--commit-dirty=true"];
+    ejecutar(process.platform === "win32" ? process.execPath : "npx", process.platform === "win32" ? [npxCli, ...args] : args, { stdio: "inherit" });
   } finally {
     rmSync(p.carpeta, { recursive: true, force: true });
   }
