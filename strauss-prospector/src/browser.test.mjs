@@ -32,6 +32,19 @@ test('navegación: extrae una web oscura y no espera a network-idle', {skip:!has
   assert.equal(brand.titulo,'Web de prueba');
 });
 
+test('marca: ignora el logotipo de Google Translate y prefiere el del negocio', {skip:!hasBrowser && 'Instala Chromium con npx playwright install chromium'}, async(t)=>{
+  const server=createServer((req,res)=>{
+    if(req.url?.endsWith('.svg')) return res.writeHead(200,{'content-type':'image/svg+xml'}).end('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="40"><rect width="100" height="40" fill="red"/></svg>');
+    res.writeHead(200,{'content-type':'text/html; charset=utf-8'});
+    res.end('<!doctype html><html><head><title>Clínica Ejemplo</title></head><body><img src="/googlelogo.svg" alt="Google Traductor de Google"><header><img src="/brand.svg" class="logo" alt="Clínica Ejemplo"></header><h1>Clínica Ejemplo</h1><section style="width:900px;height:500px;background-image:url(/hero.svg)"></section></body></html>');
+  });
+  server.listen(0,'127.0.0.1'); await once(server,'listening');
+  t.after(()=>{server.closeAllConnections();server.close();});
+  const brand=await extraerMarca(`http://127.0.0.1:${server.address().port}/`);
+  assert.match(brand.logo,/\/brand\.svg$/);
+  assert.match(brand.fotos[0],/\/hero\.svg$/);
+});
+
 test('demos: composiciones seleccionadas no desbordan un móvil de 320 px', {skip:!hasBrowser && 'Instala Chromium con npx playwright install chromium'}, async(t)=>{
   const browser=await chromium.launch(process.env.CHROMIUM_PATH ? {executablePath:process.env.CHROMIUM_PATH} : {});
   const page=await browser.newPage({viewport:{width:320,height:800}});
