@@ -87,3 +87,29 @@ test("Gemini pasa a OpenRouter cuando agota su plazo", async () => {
     Object.assign(process.env, previous.env);
   }
 });
+
+
+test("OpenRouter respeta el plazo global aunque la petición se quede esperando", async () => {
+  const previous = { fetch: globalThis.fetch, env: { ...process.env } };
+  process.env.OPENROUTER_API_KEY = "clave-de-prueba";
+  process.env.OPENROUTER_GAP_MS = "0";
+  process.env.OPENROUTER_BACKOFF_MS = "1000";
+  process.env.OPENROUTER_TIMEOUT_MS = "90000";
+  let calls = 0;
+  globalThis.fetch = async (_url, { signal }) => {
+    calls++;
+    return new Promise((_resolve, reject) => {
+      signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+    });
+  };
+  const start = Date.now();
+  try {
+    await assert.rejects(openrouter("prueba", { retries: 2, deadline: Date.now() + 40 }), /plazo agotado|sin respuesta/);
+    assert.equal(calls, 1);
+    assert.ok(Date.now() - start < 500, "se superó ampliamente el plazo global");
+  } finally {
+    globalThis.fetch = previous.fetch;
+    for (const key of Object.keys(process.env)) if (!(key in previous.env)) delete process.env[key];
+    Object.assign(process.env, previous.env);
+  }
+});
