@@ -24,13 +24,17 @@ export async function gemini(prompt, { json = false, retries = 2 } = {}) {
   const gap = num("GEMINI_GAP_MS", 13000);
   const timeout = num("GEMINI_TIMEOUT_MS", 90000);
   const backoff = num("GEMINI_BACKOFF_MS", 5000);
-  const limite = num("GEMINI_DEADLINE_MS", 8 * 60000);
+  const limite = num("GEMINI_DEADLINE_MS", process.env.OPENROUTER_API_KEY ? 2 * 60000 : 8 * 60000);
   const fin = Date.now() + limite;
   const fallos = [];
-  for (const [n, model] of modelos().entries()) {
+  modelosGemini: for (const [n, model] of modelos().entries()) {
     if (n > 0) process.stdout.write(`[${model}] `);
     for (let i = 0; i <= retries; i++) {
-      if (Date.now() > fin) throw new Error(`Gemini sin respuesta útil en ${Math.round(limite / 1000)} s (${fallos.slice(-4).join("; ")})`);
+      if (Date.now() > fin) {
+        if (!process.env.OPENROUTER_API_KEY) throw new Error(`Gemini sin respuesta útil en ${Math.round(limite / 1000)} s (${fallos.slice(-4).join("; ")})`);
+        fallos.push(`Gemini sin respuesta útil en ${Math.round(limite / 1000)} s`);
+        break modelosGemini;
+      }
       const wait = last + gap - Date.now();
       if (wait > 0) await sleep(wait);
       last = Date.now();
@@ -70,7 +74,7 @@ export async function gemini(prompt, { json = false, retries = 2 } = {}) {
   if (process.env.OPENROUTER_API_KEY) {
     process.stdout.write("[OpenRouter] ");
     try {
-      return await openrouter(prompt, { json, retries, deadline: fin });
+      return await openrouter(prompt, { json, retries });
     } catch (e) {
       fallos.push(`OpenRouter: ${e.message}`);
     }
