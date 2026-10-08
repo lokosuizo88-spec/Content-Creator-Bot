@@ -1,4 +1,5 @@
 import { sleep } from "./util.mjs";
+import { openrouter } from "./openrouter.mjs";
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 // Modelos estables de respaldo cuando el principal está saturado (503) o no está disponible.
@@ -16,7 +17,10 @@ export const modelos = () =>
  */
 export async function gemini(prompt, { json = false, retries = 2 } = {}) {
   const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("falta GEMINI_API_KEY");
+  if (!key) {
+    if (process.env.OPENROUTER_API_KEY) return openrouter(prompt, { json, retries });
+    throw new Error("falta GEMINI_API_KEY u OPENROUTER_API_KEY");
+  }
   const gap = num("GEMINI_GAP_MS", 13000);
   const timeout = num("GEMINI_TIMEOUT_MS", 90000);
   const backoff = num("GEMINI_BACKOFF_MS", 5000);
@@ -61,6 +65,14 @@ export async function gemini(prompt, { json = false, retries = 2 } = {}) {
         const m = body.match(/retry in ([\d.]+)s/i);
         await sleep(m ? Math.min(60000, Math.ceil(Number(m[1]) * 1000) + 1000) : Math.min(60000, backoff * 2 ** i));
       }
+    }
+  }
+  if (process.env.OPENROUTER_API_KEY) {
+    process.stdout.write("[OpenRouter] ");
+    try {
+      return await openrouter(prompt, { json, retries, deadline: fin });
+    } catch (e) {
+      fallos.push(`OpenRouter: ${e.message}`);
     }
   }
   throw new Error(`Gemini no disponible tras probar ${modelos().join(", ")} (${fallos.slice(-4).join("; ")})`);

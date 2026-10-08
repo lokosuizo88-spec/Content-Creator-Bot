@@ -36,6 +36,7 @@ jobs:
         env:
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           DEMOS: ${{ inputs.demos || '3' }}
@@ -44,7 +45,7 @@ jobs:
           missing=()
           [[ -n "$GOOGLE_PLACES_API_KEY" ]] || missing+=("GOOGLE_PLACES_API_KEY")
           if [[ "${DEMOS:-3}" != "0" ]]; then
-            [[ -n "$GEMINI_API_KEY" ]] || missing+=("GEMINI_API_KEY")
+            [[ -n "$GEMINI_API_KEY" || -n "$OPENROUTER_API_KEY" ]] || missing+=("GEMINI_API_KEY o OPENROUTER_API_KEY")
           fi
           if [[ "${PUBLICAR:-n}" =~ ^(s|si|true|1)$ ]]; then
             [[ -n "$CLOUDFLARE_API_TOKEN" ]] || missing+=("CLOUDFLARE_API_TOKEN")
@@ -68,6 +69,8 @@ jobs:
           PUBLICAR: ${{ inputs.publicar || 'n' }}
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL || 'upstage/solar-mini4' }}
       - name: Comprobar demos generadas en escritorio y móvil
         run: node --test src/output.test.mjs
         env:
