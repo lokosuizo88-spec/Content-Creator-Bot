@@ -65,3 +65,25 @@ test("Gemini usa OpenRouter si no hay clave de Gemini", async () => {
     Object.assign(process.env, previous.env);
   }
 });
+
+test("Gemini pasa a OpenRouter cuando agota su plazo", async () => {
+  const previous = { fetch: globalThis.fetch, env: { ...process.env } };
+  process.env.GEMINI_API_KEY = "clave-gemini-de-prueba";
+  process.env.OPENROUTER_API_KEY = "clave-openrouter-de-prueba";
+  process.env.GEMINI_DEADLINE_MS = "-1";
+  process.env.OPENROUTER_GAP_MS = "0";
+  let calls = 0;
+  globalThis.fetch = async (url) => {
+    calls++;
+    assert.match(url, /openrouter\.ai\/api\/v1\/chat\/completions$/);
+    return new Response(JSON.stringify({ choices: [{ message: { content: '{"ok":true}' } }] }), { status: 200 });
+  };
+  try {
+    assert.deepEqual(await gemini("prueba", { json: true }), { ok: true });
+    assert.equal(calls, 1);
+  } finally {
+    globalThis.fetch = previous.fetch;
+    for (const key of Object.keys(process.env)) if (!(key in previous.env)) delete process.env[key];
+    Object.assign(process.env, previous.env);
+  }
+});
