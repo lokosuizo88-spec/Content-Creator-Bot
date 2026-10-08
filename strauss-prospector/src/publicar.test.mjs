@@ -23,7 +23,7 @@ function webSimulada(inicial = {}) {
   };
   const despliegues = [];
   const ejecutar = (cmd, args) => {
-    const carpeta = args[4];
+    const carpeta = args[args.indexOf('deploy') + 1];
     const nuevo = new Map();
     for (const f of readdirSync(carpeta, { recursive: true })) {
       if (statSync(join(carpeta, f)).isFile()) nuevo.set(f.split(sep).join('/'), readFileSync(join(carpeta, f), 'utf8'));
@@ -65,8 +65,9 @@ test('publicar: conserva las demos ya publicadas y añade las nuevas', async (t)
   assert.deepEqual(r.nuevas.sort(), ['nueva', 'repetida']);
   assert.equal(web.despliegues.length, 1);
   const { cmd, args, archivos } = web.despliegues[0];
-  assert.match(cmd, /^npx(\.cmd)?$/);
-  assert.deepEqual([...args.slice(0, 4), ...args.slice(5)], ['--yes', 'wrangler@4', 'pages', 'deploy', '--project-name', 'demo-test', '--branch', 'main', '--commit-dirty=true']);
+  assert.equal(cmd, process.platform === 'win32' ? process.execPath : 'npx');
+  const cliArgs = process.platform === 'win32' ? args.slice(1) : args;
+  assert.deepEqual([...cliArgs.slice(0, 4), ...cliArgs.slice(5)], ['--yes', 'wrangler@4', 'pages', 'deploy', '--project-name', 'demo-test', '--branch', 'main', '--commit-dirty=true']);
   assert.deepEqual(archivos, ['_headers', 'antigua/img/foto-1.jpg', 'antigua/index.html', INDICE, 'nueva/img/foto-1.webp', 'nueva/index.html', 'repetida/index.html', 'robots.txt'].sort());
   // Tras desplegar, lo antiguo sigue online, lo repetido está actualizado y el índice lista todo.
   assert.equal(web.sitio.get('antigua/img/foto-1.jpg'), 'jpg-antiguo');
@@ -108,12 +109,19 @@ test('publicar: si no puede leer lo publicado, no despliega', async (t) => {
   assert.equal(llamadas.length, 0);
 });
 
-test('publicar: una demo del índice que ya no existe se avisa y no bloquea', async (t) => {
+test('publicar: si una demo del índice da 404, no despliega ni la borra', async (t) => {
   const web = webSimulada({ [INDICE]: indice({ desaparecida: { archivos: ['index.html'] }, viva: {} }), 'viva/index.html': 'v' });
   const dir = await salidaCon(t, { nueva: { 'index.html': 'n' } });
-  const r = await publicar({ dir, proyecto: 'demo-test', base: BASE, descargar: web.descargar, ejecutar: web.ejecutar, espera: 0 });
-  assert.deepEqual(r.perdidas, ['desaparecida']);
-  assert.deepEqual(Object.keys(JSON.parse(web.sitio.get(INDICE)).demos).sort(), ['nueva', 'viva']);
+  await assert.rejects(publicar({ dir, proyecto: 'demo-test', base: BASE, descargar: web.descargar, ejecutar: web.ejecutar, espera: 0 }), /No se publica para no borrar/);
+  assert.equal(web.despliegues.length, 0);
+  assert.deepEqual(Object.keys(JSON.parse(web.sitio.get(INDICE)).demos).sort(), ['desaparecida', 'viva']);
+});
+
+test('publicar: rechaza rutas inseguras del índice sin desplegar', async (t) => {
+  const web = webSimulada({ [INDICE]: indice({ antigua: { archivos: ['index.html', '../fuera.txt'] } }), 'antigua/index.html': 'v' });
+  const dir = await salidaCon(t, { nueva: { 'index.html': 'n' } });
+  await assert.rejects(publicar({ dir, base: BASE, descargar: web.descargar, ejecutar: web.ejecutar }), /Archivos no válidos/);
+  assert.equal(web.despliegues.length, 0);
 });
 
 test('publicar: falla si tras desplegar alguna demo no responde', async (t) => {
