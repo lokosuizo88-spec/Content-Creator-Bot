@@ -46,15 +46,29 @@ export async function extraerMarca(url, shotPath) {
       const colores = Object.entries(votos).sort((a, b) => b[1] - a[1]).map((e) => e[0]).slice(0, 3);
       const theme = document.querySelector('meta[name="theme-color"]')?.content;
       // logo
-      const logoEl = [...document.images].find((i) => /logo/i.test(i.src + i.alt + i.className + (i.parentElement?.className || "")) && i.naturalWidth > 30);
-      const logo = logoEl ? abs(logoEl.currentSrc || logoEl.src) : abs(document.querySelector('link[rel~="icon"]')?.href);
+      const ajeno = /(?:google|gstatic|translate|recaptcha|facebook|instagram|whatsapp)/i;
+      const logos = [...document.images]
+        .filter((i) => /logo/i.test(i.src + i.alt + i.className + (i.parentElement?.className || "")))
+        .filter((i) => i.naturalWidth > 30 && i.getBoundingClientRect().width > 0 && i.getBoundingClientRect().height > 0)
+        .filter((i) => !ajeno.test((i.currentSrc || i.src) + i.alt))
+        .sort((a, b) => Number(!!b.closest('header,nav')) - Number(!!a.closest('header,nav')));
+      const logoEl = logos[0];
+      const icon = document.querySelector('link[rel~="icon"]')?.href;
+      const iconUrl = abs(icon);
+      const logo = logoEl ? abs(logoEl.currentSrc || logoEl.src)
+        : iconUrl && new URL(iconUrl).hostname === location.hostname && !ajeno.test(iconUrl) ? iconUrl : null;
       // fotos grandes
       const fotos = [...document.images]
         .filter((i) => i.naturalWidth >= 600 && i.naturalHeight >= 350 && !/logo|icon|sprite/i.test(i.src))
         .sort((a, b) => b.naturalWidth * b.naturalHeight - a.naturalWidth * a.naturalHeight)
         .map((i) => abs(i.currentSrc || i.src)).filter(Boolean);
+      const fondos = [...document.querySelectorAll('body *')]
+        .filter((el) => { const r = el.getBoundingClientRect(); return r.width >= 400 && r.height >= 200; })
+        .flatMap((el) => [...css(el, 'backgroundImage').matchAll(/url\(["']?([^"')]+)["']?\)/g)].map((m) => abs(m[1])))
+        .filter((u) => u && /^https?:/i.test(u) && !ajeno.test(u));
       const og = abs(document.querySelector('meta[property="og:image"]')?.content);
-      if (og) fotos.unshift(og);
+      fotos.unshift(...fondos);
+      if (og) fotos.push(og);
       const bodyBg = css(document.body, 'backgroundColor');
       const isTransparent = (value) => value === 'transparent' || /rgba\([^)]*,\s*0(?:\.0+)?\s*\)$/.test(value);
       const selectedBg = isTransparent(bodyBg) ? css(document.documentElement, 'backgroundColor') : bodyBg;
