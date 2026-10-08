@@ -96,3 +96,30 @@ test('Gemini: GEMINI_FALLBACK_MODELS sustituye la lista de respaldo y hay un top
     await assert.rejects(gemini('prueba'), /sin respuesta útil/);
   }, { GEMINI_DEADLINE_MS: '0', GEMINI_BACKOFF_MS: '5' });
 });
+
+
+test('Gemini: reintenta errores al leer los cuerpos JSON y de error', async () => {
+  const cuerpoJsonRoto = ok();
+  cuerpoJsonRoto.json = async () => { throw new TypeError('connection reset while reading JSON'); };
+  const cuerpoErrorRoto = new Response('', { status: 503 });
+  cuerpoErrorRoto.text = async () => { throw new TypeError('connection reset while reading error body'); };
+  const pedidos = await conFetch([cuerpoJsonRoto, cuerpoErrorRoto, ok('recuperado')], async () => {
+    assert.equal(await gemini('prueba'), 'recuperado');
+  });
+  assert.equal(pedidos.length, 3);
+});
+
+test('Gemini: el timeout por petición queda limitado al plazo global restante', async () => {
+  let transcurrido;
+  const pedidos = await conFetch([options => new Promise((_, reject) => {
+    const inicio = Date.now();
+    options.signal.addEventListener('abort', () => {
+      transcurrido = Date.now() - inicio;
+      reject(options.signal.reason);
+    }, { once: true });
+  })], async () => {
+    await assert.rejects(gemini('prueba'), /sin respuesta útil/);
+  }, { GEMINI_TIMEOUT_MS: '1000', GEMINI_DEADLINE_MS: '40' });
+  assert.equal(pedidos.length, 1);
+  assert.ok(transcurrido < 500, `la petición duró ${transcurrido} ms con un plazo global de 40 ms`);
+});
