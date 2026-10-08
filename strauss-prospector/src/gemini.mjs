@@ -64,6 +64,9 @@ export async function gemini(prompt, { json = false, retries = 2 } = {}) {
           body = await r.text();
         }
       } catch (e) {
+        if (r && (r.status === 401 || r.status === 403)) {
+          throw new Error(`Gemini ${r.status}: no se pudo leer el cuerpo de error (${e.message})`);
+        }
         fallos.push(`${model}: ${e.name === "TimeoutError" ? `sin respuesta en ${timeoutPeticion / 1000}s` : e.message}`);
         const pausa = Math.min(60000, backoff * 2 ** i, Math.max(0, fin - Date.now()));
         if (i < retries && pausa > 0) await sleep(pausa);
