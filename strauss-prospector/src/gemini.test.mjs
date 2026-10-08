@@ -125,3 +125,13 @@ test('Gemini: el timeout por petición queda limitado al plazo global restante',
   assert.equal(pedidos.length, 1);
   assert.ok(transcurrido < 500, `la petición duró ${transcurrido} ms con un plazo global de 40 ms`);
 });
+
+
+test('Gemini: no reintenta un 401/403 aunque falle la lectura de su cuerpo', async () => {
+  const rechazado = new Response('', { status: 403 });
+  rechazado.text = async () => { throw new TypeError('connection reset while reading auth body'); };
+  const pedidos = await conFetch([rechazado], async () => {
+    await assert.rejects(gemini('prueba'), /Gemini 403: no se pudo leer el cuerpo de error/);
+  });
+  assert.equal(pedidos.length, 1);
+});
