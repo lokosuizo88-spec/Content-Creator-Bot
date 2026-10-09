@@ -1,9 +1,9 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { buscar } from "./places.mjs";
-import { auditar, PROBLEMAS } from "./audit.mjs";
+import { auditar, buscarContacto, PROBLEMAS } from "./audit.mjs";
 import { extraerMarca } from "./brand.mjs";
 import { generarTextos, renderDemo } from "./demo.mjs";
-import { redactarEmail } from "./email.mjs";
+import { envioCsv, redactarEmail } from "./email.mjs";
 import { slug, esc, uniqueSlugs, guardarImagenes } from "./util.mjs";
 import { urlBase } from "./publicar.mjs";
 
@@ -64,20 +64,23 @@ let emails = 0;
 for (const r of res.filter((x) => x.audit.flags.length && x.audit.pts >= MIN_PTS)) {
   const url = r.demo && PUBLICAR ? `${urlBase(PROYECTO, BASE_URL)}/${r.id}/` : "";
   r.email = redactarEmail(r, r.audit, url);
+  r.contacto = await buscarContacto(r, r.audit);
+  r.demoUrl = url;
   await writeFile(`${dir}/emails/${r.id}.txt`, r.email);
   emails++;
 }
+await writeFile(`${dir}/envios.csv`, envioCsv(res.filter((r) => r.email).map((r) => ({ para: r.contacto || "", email: r.email, demo: r.demoUrl }))));
 
 const filas = res
   .map(
     (r) => `<tr><td><b>${esc(r.nombre)}</b><br><small>${esc(r.web || "sin web")}</small></td><td>${r.audit.pts}</td>
 <td>${r.audit.flags.map((f) => `<span title="${esc(PROBLEMAS[f]?.problema || "")}">${f}</span>`).join(" ")}</td>
-<td>${r.demo ? `<a href="demos/${r.id}/index.html">demo</a>` : "—"}</td><td>${r.email ? `<details><summary>email</summary><pre>${esc(r.email)}</pre></details>` : "—"}</td></tr>`,
+<td>${r.demo ? `<a href="demos/${r.id}/index.html">demo</a>` : "—"}</td><td>${r.contacto ? `<a href="mailto:${esc(r.contacto)}">${esc(r.contacto)}</a>` : r.email ? "sin correo publicado" : "—"}</td><td>${r.email ? `<details><summary>email</summary><pre>${esc(r.email)}</pre></details>` : "—"}</td></tr>`,
   )
   .join("");
 await writeFile(
   `${dir}/panel.html`,
-  `<!doctype html><meta charset=utf-8><meta name="viewport" content="width=device-width,initial-scale=1"><title>Panel</title><style>body{font:14px system-ui;margin:2rem}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #ddd;padding:8px;vertical-align:top;text-align:left}span{background:#eef;padding:2px 6px;border-radius:6px;margin:2px;display:inline-block}pre{white-space:pre-wrap;max-width:60ch}.table-wrap{max-width:100%;overflow-x:auto}@media(max-width:600px){body{margin:1rem}table{min-width:560px}}</style><h1>${esc(SECTOR)} · ${esc(ZONA)}</h1><div class="table-wrap"><table><tr><th>Negocio<th>Pts<th>Problemas<th>Demo<th>Email</tr>${filas}</table></div>`,
+  `<!doctype html><meta charset=utf-8><meta name="viewport" content="width=device-width,initial-scale=1"><title>Panel</title><style>body{font:14px system-ui;margin:2rem}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #ddd;padding:8px;vertical-align:top;text-align:left}span{background:#eef;padding:2px 6px;border-radius:6px;margin:2px;display:inline-block}pre{white-space:pre-wrap;max-width:60ch}.table-wrap{max-width:100%;overflow-x:auto}@media(max-width:600px){body{margin:1rem}table{min-width:560px}}</style><h1>${esc(SECTOR)} · ${esc(ZONA)}</h1><div class="table-wrap"><table><tr><th>Negocio<th>Pts<th>Problemas<th>Demo<th>Contacto<th>Email</tr>${filas}</table></div>`,
 );
 console.log(`\n✔ Listo: ${dir}/panel.html · ${hechas} demos · ${emails} emails`);
 if (PUBLICAR && hechas) console.log("  Publicación pendiente: node --test src/output.test.mjs && node src/publicar.mjs");

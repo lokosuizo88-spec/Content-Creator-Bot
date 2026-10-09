@@ -82,6 +82,42 @@ export const PROBLEMAS = {
   },
 };
 
+const RE_MAIL = /[a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}/gi;
+const ES_MAIL = /^[a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}$/i;
+const MAL_MAIL = /\.(png|jpe?g|gif|webp|svg|css|js)$|sentry|wixpress|example\.|@2x|u00|noreply|no-reply|godaddy|domain\.com|tuemail|email\.com/i;
+
+/** Primer correo de contacto publicado en el HTML: antes los mailto: y los del dominio de la propia web. */
+export function extraerEmail(html, web) {
+  const host = (() => { try { return new URL(web).hostname.replace(/^www\./, ""); } catch { return ""; } })();
+  const mailto = [...html.matchAll(/mailto:([^"'?\s>]+)/gi)].map((m) => { try { return decodeURIComponent(m[1]); } catch { return m[1]; } });
+  const todos = [...new Set([...mailto, ...(html.match(RE_MAIL) || [])].map((m) => m.toLowerCase().trim()))].filter((m) => ES_MAIL.test(m) && !MAL_MAIL.test(m));
+  return todos.find((m) => host && m.endsWith(`@${host}`)) || todos.find((m) => host && m.endsWith(`.${host}`)) || todos[0] || null;
+}
+
+/** Enlaces de la propia web a su página de contacto (mismo dominio). */
+export function enlacesContacto(html, web) {
+  let base;
+  try { base = new URL(web); } catch { return []; }
+  const urls = [...html.matchAll(/href=["']([^"']+)["']/gi)]
+    .map((m) => { try { return new URL(m[1], base); } catch { return null; } })
+    .filter((u) => u && /^https?:$/.test(u.protocol) && u.hostname.replace(/^www\./, "") === base.hostname.replace(/^www\./, "") && /contact/i.test(u.pathname))
+    .map((u) => ((u.hash = ""), u.href));
+  return [...new Set(urls)].slice(0, 3);
+}
+
+/** Correo de contacto del negocio: el de la portada auditada o, si no hay, el de su página de contacto. */
+export async function buscarContacto(neg, audit) {
+  if (audit.info.email || !neg.web) return audit.info.email || null;
+  let fijas;
+  try { fijas = ["/contacto", "/contact", "/contacta", "/contactar"].map((r) => new URL(r, neg.web).href); } catch { return null; }
+  for (const url of [...new Set([...(audit.info.contacto || []), ...fijas])].slice(0, 4)) {
+    const c = await fetchText(url, 10000);
+    const email = c.ok ? extraerEmail(c.html, neg.web) : null;
+    if (email) return (audit.info.email = email);
+  }
+  return null;
+}
+
 export async function auditar(neg, { visual } = {}) {
   const flags = [];
   const info = { chatbot: null, reserva: false, idiomas: 1 };
@@ -94,6 +130,8 @@ export async function auditar(neg, { visual } = {}) {
   }
   if (!r.ok || r.html.length < 500) return { flags: ["web_caida"], pts: PROBLEMAS.web_caida.pts, info, motivo: r.error || `HTTP ${r.status}` };
   const h = r.html;
+  info.email = extraerEmail(h, neg.web);
+  info.contacto = enlacesContacto(h, neg.web);
   if (r.ms > 4000) flags.push("lenta");
   const langs = new Set([...h.matchAll(/hreflang=["']([a-z]{2})/gi)].map((m) => m[1].toLowerCase()));
   info.idiomas = Math.max(1, langs.size);
