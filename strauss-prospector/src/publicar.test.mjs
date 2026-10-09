@@ -14,9 +14,12 @@ const BASE = 'https://main.demo-test.pages.dev';
 function webSimulada(inicial = {}) {
   let sitio = new Map(Object.entries(inicial));
   const pedidos = [];
+  let lecturasIndice = 0;
+  const alLeerIndice = [];
   const descargar = async (url) => {
     pedidos.push(url);
-    let ruta = url.slice(BASE.length + 1);
+    let ruta = url.slice(BASE.length + 1).split('?')[0];
+    if (ruta === INDICE) alLeerIndice[lecturasIndice++]?.(sitio);
     if (ruta.endsWith('/') || ruta === '') ruta += 'index.html';
     if (!sitio.has(ruta)) return new Response('no', { status: 404 });
     return new Response(sitio.get(ruta), { status: 200 });
@@ -31,7 +34,7 @@ function webSimulada(inicial = {}) {
     despliegues.push({ cmd, args, archivos: [...nuevo.keys()].sort() });
     sitio = nuevo;
   };
-  return { descargar, ejecutar, despliegues, pedidos, get sitio() { return sitio; } };
+  return { descargar, ejecutar, despliegues, pedidos, alLeerIndice, get sitio() { return sitio; }, set sitio(v) { sitio = v; } };
 }
 
 async function salidaCon(t, demos) {
@@ -104,7 +107,7 @@ test('publicar: si no puede leer lo publicado, no despliega', async (t) => {
   );
   await assert.rejects(publicar({ dir, base: BASE, ejecutar, descargar: async () => new Response('', { status: 503 }) }), /HTTP 503/);
   const web = webSimulada({ [INDICE]: indice({ antigua: { archivos: ['index.html'] } }) });
-  const fallaDemo = async (url) => (url.endsWith(INDICE) ? web.descargar(url) : new Response('', { status: 500 }));
+  const fallaDemo = async (url) => (url.includes(INDICE) ? web.descargar(url) : new Response('', { status: 500 }));
   await assert.rejects(publicar({ dir, base: BASE, ejecutar, descargar: fallaDemo }), /No se pudo descargar antigua/);
   assert.equal(llamadas.length, 0);
 });
@@ -127,10 +130,56 @@ test('publicar: rechaza rutas inseguras del índice sin desplegar', async (t) =>
 test('publicar: falla si tras desplegar alguna demo no responde', async (t) => {
   const web = webSimulada({ [INDICE]: indice({}) });
   const dir = await salidaCon(t, { nueva: { 'index.html': 'n' } });
+  const desplegarSinNueva = (cmd, args) => { web.ejecutar(cmd, args); web.sitio.delete('nueva/index.html'); };
+  await assert.rejects(
+    publicar({ dir, proyecto: 'demo-test', base: BASE, descargar: web.descargar, ejecutar: desplegarSinNueva, espera: 0 }),
+    /no responden: https:\/\/main\.demo-test\.pages\.dev\/nueva\//,
+  );
+});
+
+test('publicar: falla si el despliegue no llega a la web', async (t) => {
+  const web = webSimulada({ [INDICE]: indice({}) });
+  const dir = await salidaCon(t, { nueva: { 'index.html': 'n' } });
   const sinDesplegar = () => {}; // el despliegue "no llega": la web sigue sin la demo nueva
   await assert.rejects(
     publicar({ dir, proyecto: 'demo-test', base: BASE, descargar: web.descargar, ejecutar: sinDesplegar, espera: 0 }),
-    /no responden: https:\/\/main\.demo-test\.pages\.dev\/nueva\//,
+    /no muestra esta publicación/,
+  );
+});
+
+test('publicar: si otra publicación cambia la web mientras se prepara, se prepara de nuevo y no la pisa', async (t) => {
+  const web = webSimulada({ [INDICE]: indice({ antigua: {} }), 'antigua/index.html': 'a' });
+  // Justo al volver a leer el índice antes de desplegar, otra publicación ha añadido «ajena».
+  web.alLeerIndice[1] = (sitio) => {
+    sitio.set('ajena/index.html', 'x');
+    sitio.set(INDICE, JSON.stringify({ actualizado: '2000-01-01T00:00:00.000Z', demos: { antigua: { archivos: ['index.html'] }, ajena: { archivos: ['index.html'] } } }));
+  };
+  const dir = await salidaCon(t, { nueva: { 'index.html': 'n' } });
+  await publicar({ dir, proyecto: 'demo-test', base: BASE, descargar: web.descargar, ejecutar: web.ejecutar, espera: 0 });
+  assert.equal(web.despliegues.length, 1);
+  assert.deepEqual(Object.keys(JSON.parse(web.sitio.get(INDICE)).demos).sort(), ['ajena', 'antigua', 'nueva']);
+  assert.equal(web.sitio.get('ajena/index.html'), 'x');
+});
+
+test('publicar: si la web no deja de cambiar, no despliega', async (t) => {
+  const web = webSimulada({ [INDICE]: indice({}) });
+  for (let i = 0; i < 10; i++) web.alLeerIndice[i] = (sitio) => sitio.set(INDICE, JSON.stringify({ actualizado: `v${i}`, demos: {} }));
+  const dir = await salidaCon(t, { nueva: { 'index.html': 'n' } });
+  await assert.rejects(publicar({ dir, base: BASE, descargar: web.descargar, ejecutar: web.ejecutar, espera: 0 }), /cambia mientras se prepara/);
+  assert.equal(web.despliegues.length, 0);
+});
+
+test('publicar: avisa si otra publicación posterior ha quitado las demos nuevas', async (t) => {
+  const web = webSimulada({ [INDICE]: indice({}) });
+  const dir = await salidaCon(t, { nueva: { 'index.html': 'n' } });
+  const desplegarYSerPisado = (cmd, args) => {
+    web.ejecutar(cmd, args);
+    // Otra publicación que leyó la web antes que nosotros termina después y la sustituye sin «nueva».
+    web.sitio = new Map([[INDICE, JSON.stringify({ actualizado: '9999-01-01T00:00:00.000Z', demos: {} })]]);
+  };
+  await assert.rejects(
+    publicar({ dir, proyecto: 'demo-test', base: BASE, descargar: web.descargar, ejecutar: desplegarYSerPisado, espera: 0 }),
+    /Otra publicación a la vez ha sustituido la web sin incluir: nueva/,
   );
 });
 
