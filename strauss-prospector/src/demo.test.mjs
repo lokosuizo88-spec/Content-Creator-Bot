@@ -29,6 +29,15 @@ test('composición: layouts mantienen fallback de animación y hover tras reveal
   assert.match(html, /minmax\(min\(340px,100%\),1fr\)/);
 });
 
+test('composición: no repite una misma foto para tratamientos distintos', () => {
+  const fourServices = { ...copy, servicios: Array.from({ length: 4 }, (_, i) => ({ titulo: `Servicio ${i + 1}`, texto: 'Descripción real.' })) };
+  const twoPhotos = { ...brand, fotos: ['img/hero.jpg', 'img/tratamiento.jpg'] };
+  for (let i = 0; i < 24; i++) {
+    const html = renderDemo({ ...business, nombre: `Clínica de prueba ${i}` }, twoPhotos, fourServices);
+    assert.doesNotMatch(html, /class="filas"/, 'con una sola foto de tratamiento deben usarse filas de texto');
+  }
+});
+
 test('identificadores: nombres equivalentes se distinguen al generar un lote', () => {
   assert.deepEqual(uniqueSlugs(['Clínica Á','Clinica A','!!!']),['clinica-a','clinica-a-2','negocio']);
   assert.deepEqual(uniqueSlugs(['Clinica','Clinica 2','Clínica']),['clinica','clinica-2','clinica-3']);
