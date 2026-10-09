@@ -42,16 +42,16 @@ function archivos(carpeta) {
 }
 
 /** Lee el índice de lo publicado. Sin índice todavía, parte de la lista inicial del repositorio. */
-async function leerPublicado(base, descargar) {
+async function leerPublicado(base, descargar, { avisar = true } = {}) {
   let r;
   try {
-    r = await descargar(`${base}/${INDICE}`, { cache: "no-store" });
+    r = await descargar(`${base}/${INDICE}?v=${Date.now()}`, { cache: "no-store" });
   } catch (e) {
     throw new Error(`No se puede leer lo publicado en ${base} (${e.message}). No se publica para no romper enlaces.`);
   }
   if (r.status === 404) {
     const inicial = JSON.parse(readFileSync(INICIAL, "utf8"));
-    console.log(`  Aún no hay ${INDICE} publicado: se parte de las ${Object.keys(inicial.demos).length} demos de demos-publicadas-inicial.json`);
+    if (avisar) console.log(`  Aún no hay ${INDICE} publicado: se parte de las ${Object.keys(inicial.demos).length} demos de demos-publicadas-inicial.json`);
     return inicial;
   }
   if (!r.ok) throw new Error(`No se puede leer ${base}/${INDICE} (HTTP ${r.status}). No se publica para no romper enlaces.`);
@@ -68,6 +68,7 @@ export async function prepararDespliegue({ dir, base, descargar = fetch, ahora =
   const nuevas = demosEn(dir);
   if (!nuevas.every(idSeguro)) throw new Error("Nombre de demo no válido. No se publica.");
   const publicado = await leerPublicado(base, descargar);
+  const firma = JSON.stringify(publicado);
   const carpeta = mkdtempSync(join(tmpdir(), "demos-"));
   const indice = { actualizado: ahora.toISOString(), demos: {} };
   const conservadas = [];
@@ -105,7 +106,7 @@ export async function prepararDespliegue({ dir, base, descargar = fetch, ahora =
   writeFileSync(join(carpeta, INDICE), JSON.stringify(indice, null, 2));
   writeFileSync(join(carpeta, "_headers"), "/*\n  X-Robots-Tag: noindex, nofollow\n");
   writeFileSync(join(carpeta, "robots.txt"), "User-agent: *\nDisallow: /\n");
-  return { carpeta, indice, nuevas, conservadas };
+  return { carpeta, indice, nuevas, conservadas, firma };
   } catch (e) {
     rmSync(carpeta, { recursive: true, force: true });
     throw e;
@@ -123,13 +124,53 @@ export async function comprobarPublicadas({ base, ids, descargar = fetch, intent
   return pendientes;
 }
 
+/**
+ * Tras desplegar, espera a que el índice online sea el que acabamos de subir. Si otra publicación
+ * simultánea lo ha sustituido sin incluir nuestras demos, lo dice para volver a publicar.
+ */
+export async function comprobarIndice({ base, esperado, nuevas, descargar = fetch, intentos = 6, espera = 5000 }) {
+  let visto = null;
+  for (let i = 0; i < intentos; i++) {
+    if (i) await new Promise((r) => setTimeout(r, espera));
+    try {
+      const r = await descargar(`${base}/${INDICE}?v=${Date.now()}`, { cache: "no-store" });
+      if (!r.ok) continue;
+      visto = await r.json();
+    } catch {
+      continue;
+    }
+    if (visto?.actualizado === esperado.actualizado) return;
+    if (visto?.actualizado && visto.actualizado > esperado.actualizado) {
+      const faltan = nuevas.filter((id) => !visto.demos?.[id]);
+      if (faltan.length) throw new Error(`Otra publicación a la vez ha sustituido la web sin incluir: ${faltan.join(", ")}. Vuelve a publicar esta búsqueda.`);
+      return;
+    }
+  }
+  throw new Error(`Publicado, pero ${base}/${INDICE} no muestra esta publicación${visto?.actualizado ? ` (sigue la de ${visto.actualizado})` : ""}. Revisa Cloudflare antes de enviar enlaces.`);
+}
+
 export async function publicar({ dir, proyecto = "strauss-demos", base = urlBase(proyecto), ejecutar = execFileSync, descargar = fetch, espera } = {}) {
   if (!dir || !existsSync(dir)) throw new Error(`No existe la carpeta de demos: ${dir}`);
   if (!demosEn(dir).length) {
     console.log(`Nada que publicar en ${dir}`);
     return { nuevas: [], conservadas: [] };
   }
-  const p = await prepararDespliegue({ dir, base, descargar });
+  let p;
+  for (let intento = 1; ; intento++) {
+    p = await prepararDespliegue({ dir, base, descargar });
+    // Si otra publicación ha cambiado la web mientras preparábamos, se vuelve a preparar con lo nuevo.
+    let actual;
+    try {
+      actual = JSON.stringify(await leerPublicado(base, descargar, { avisar: false }));
+    } catch (e) {
+      rmSync(p.carpeta, { recursive: true, force: true });
+      throw e;
+    }
+    if (actual === p.firma) break;
+    rmSync(p.carpeta, { recursive: true, force: true });
+    if (intento >= 3) throw new Error("La web publicada cambia mientras se prepara la publicación (¿otra publicación a la vez?). No se publica; inténtalo en unos minutos.");
+    console.log("  La web publicada ha cambiado mientras se preparaba; se prepara de nuevo…");
+  }
   try {
     console.log(`▶ Publicando en Cloudflare Pages (${proyecto}): ${p.nuevas.length} nuevas + ${p.conservadas.length} ya publicadas que se conservan…`);
     const npxCli = join(dirname(process.execPath), "node_modules", "npm", "bin", "npx-cli.js");
@@ -140,6 +181,7 @@ export async function publicar({ dir, proyecto = "strauss-demos", base = urlBase
     rmSync(p.carpeta, { recursive: true, force: true });
   }
   const ids = Object.keys(p.indice.demos);
+  await comprobarIndice({ base, esperado: p.indice, nuevas: p.nuevas, descargar, ...(espera !== undefined ? { espera } : {}) });
   const caidas = await comprobarPublicadas({ base, ids, descargar, ...(espera !== undefined ? { espera } : {}) });
   if (caidas.length) throw new Error(`Publicado, pero no responden: ${caidas.map((id) => `${base}/${id}/`).join(", ")}`);
   console.log(`✔ ${ids.length} demos online en ${base}/`);
