@@ -126,6 +126,7 @@ export function renderDemo(neg, marca, t, idx = 0) {
     cta: pick(CTAS, (h >> 11) + idx),
     orden: pick(ORDENES, (h >> 13) + idx),
   };
+  if (cfg.servicios === "filas" && c.fotos.length < Math.min(4, t.servicios.length)) cfg.servicios = "lista";
   const cuerpo = cfg.orden.map((k) => R[k](cfg[k], c)).join("\n");
   const fonts = [...new Set([fh, fb])].map((f) => `family=${encodeURIComponent(f)}:wght@400;500;600;700`).join("&");
   const css = `
