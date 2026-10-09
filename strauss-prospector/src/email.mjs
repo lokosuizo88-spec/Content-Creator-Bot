@@ -24,3 +24,15 @@ Un saludo,
 Diego · Strauss Digital
 `;
 }
+
+const csv = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+
+/** CSV para combinar correspondencia: una fila por email, con su destinatario y la demo si se publicó. */
+export function envioCsv(filas) {
+  const lineas = filas.map(({ para, email, demo }) => {
+    const m = email.match(/^Asunto: (.*)\r?\n\r?\n([\s\S]*)$/);
+    return [para, m ? m[1] : "", m ? m[2].trim() : email, demo].map(csv).join(",");
+  });
+  const fin = "\r\n";
+  return String.fromCharCode(0xfeff) + "para,asunto,cuerpo,demo" + fin + lineas.map((l) => l + fin).join("");
+}
