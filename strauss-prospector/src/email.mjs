@@ -5,7 +5,8 @@ export function redactarEmail(neg, audit, demoUrl) {
   const nombre = neg.nombre.trim().replace(/[.\s]+$/, "");
   const fl = audit.flags.filter((f) => PROBLEMAS[f]).sort((a, b) => PROBLEMAS[b].pts - PROBLEMAS[a].pts).slice(0, 4);
   const extra = [];
-  if (audit.info.chatbot) extra.push(`He visto que usáis ${audit.info.chatbot} en la web.`);
+  if (audit.info.chatbot === "WhatsApp (widget)") extra.push("He visto un enlace o integración de WhatsApp en la página revisada.");
+  else if (audit.info.chatbot) extra.push(`He visto que usáis ${audit.info.chatbot} en la web.`);
   const items = fl.map((f) => `• ${PROBLEMAS[f].problema}\n  → ${PROBLEMAS[f].solucion}`).join("\n\n");
   return `Asunto: He revisado la web de ${nombre}${demoUrl ? " (y te he preparado algo)" : ""}
 
