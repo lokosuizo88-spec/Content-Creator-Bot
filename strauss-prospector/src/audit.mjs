@@ -54,8 +54,8 @@ export const PROBLEMAS = {
   },
   antigua: {
     pts: 2,
-    problema: "El diseño de la web se ve anticuado y no refleja la calidad del centro; en móvil se ve mal.",
-    solucion: "Rediseño moderno, responsive y centrado en conseguir citas. Te preparé una demo con tu identidad.",
+    problema: "La página revisada no indica adaptación a móviles o usa maquetación HTML antigua.",
+    solucion: "Podría rehacerla con un diseño adaptado a móvil y pensado para conseguir citas.",
   },
   tema_stock: {
     pts: 2,
@@ -72,13 +72,13 @@ export const PROBLEMAS = {
     problema: "La página revisada menciona Kit Digital o financiación europea.",
     solucion: "Podría revisar con vosotros si la web actual cumple los objetivos que buscáis.",
   },
-  visual_generica: { pts: 2, problema: "A nivel visual la web transmite poco: no destaca frente a otras clínicas de la zona.", solucion: "Dirección visual propia que refleje el nivel real del centro." },
-  visual_anticuada: { pts: 2, problema: "El aspecto visual es de hace años (tipografías, banners, estructura).", solucion: "Rediseño actual con jerarquía clara y llamadas a la acción visibles." },
-  visual_rota: { pts: 3, problema: "Hay elementos visuales rotos (imágenes que no cargan, secciones desalineadas).", solucion: "Reconstrucción limpia sin errores en móvil ni escritorio." },
+  visual_generica: { pts: 2, problema: "Visualmente, la página revisada se parece a muchas otras del sector y destaca poco.", solucion: "Podría proponer una dirección visual propia que refleje el nivel del centro." },
+  visual_anticuada: { pts: 2, problema: "El aspecto visual de la página revisada (tipografías, banners, estructura) parece de hace años.", solucion: "Podría proponer un rediseño actual con jerarquía clara y llamadas a la acción visibles." },
+  visual_rota: { pts: 3, problema: "En la revisión vi elementos visuales que fallaban (imágenes que no cargaban o secciones desalineadas).", solucion: "Revisaría y corregiría esos elementos para que la web se vea completa." },
   chatbot_mal: {
     pts: 3,
-    problema: "Tienes un chatbot instalado pero no responde bien (no contesta, no habla el idioma del cliente o no ofrece cita).",
-    solucion: "Reconfiguro el chatbot con tus datos reales y un flujo que termina en una cita.",
+    problema: "En la revisión, el asistente de la web no pareció responder bien (sin respuesta, en otro idioma o sin ofrecer cita).",
+    solucion: "Podría revisar su configuración con vuestros datos para que oriente hacia la cita.",
   },
 };
 
